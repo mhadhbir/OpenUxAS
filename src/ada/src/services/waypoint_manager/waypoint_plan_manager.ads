@@ -19,36 +19,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
 
    package Pos64_WP_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
    use Pos64_WP_Maps;
-   -- use Pos64_WP_Maps.Formal_Model;
-   -- I get an error about multiple use clauses causing hiding something for Vectors
-
    package Pos_WP_Maps_P renames Pos64_WP_Maps.Formal_Model.P;
    package Pos_WP_Maps_K renames Pos64_WP_Maps.Formal_Model.K;
    package Pos_WP_Maps_M is new Ada.Containers.Functional_Maps
      (Pos64, Waypoint);
-   use type Pos_WP_Maps_M.Map;
-
    subtype Pos64_WP_Map is Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
      with Predicate =>
               (for all Id of Pos64_WP_Map =>
                  (Element (Pos64_WP_Map, Id).Number = Id
                   and
                     Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
-
-   --  function Same_Mappings
-   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
-   --     N : Pos_WP_Maps_M.Map)
-   --     return Boolean
-   --  with Ghost,
-   --       Annotate => (GNATprove, Inline_For_Proof);
-   --  --  The two structures contain the same mappings
-   --
-   --  function Model (M : Pos64_WP_Map) return Pos_WP_Maps_M.Map with
-   --    Post => Same_Mappings
-   --      (Int64_Formal_Set_Maps.Formal_Model.Model (M), Model'Result);
-   --  Redefine the model of a map of formal sets to be a map of functional
-   --  sets to ease formal verification.
-   --  Model cannot be ghost as it is used in a type predicate.
 
    package Pos64_Nat64_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
