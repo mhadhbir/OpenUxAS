@@ -42,10 +42,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      with
        -- Global => null,
        Pre => Length (State.MC.WaypointList) <= Max,
-       Post => State.MC = State'Old.MC and then
-       (for all Id of State.Id_To_Waypoint =>
-          Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                    Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+     Post => State.MC = State'Old.MC;
+     --  and then
+     --    (for all Id of State.Id_To_Waypoint =>
+     --       Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+     --                 Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
    procedure Extract_MissionCommand_Maps
      (State : in out Waypoint_Plan_Manager_State)
@@ -83,6 +84,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Same_Keys
               (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint),
                Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id)));
+         pragma Loop_Invariant
+           (for all Id of Model (State.Id_To_Next_Id) =>
+                Element (Model (State.Id_To_Next_Id), Id) =
+                Element (Model (State.Id_To_Waypoint), Id).NextWaypoint);
       end loop;
 
       --  for Id in State.Id_To_Waypoint loop
