@@ -39,8 +39,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new Ada.Containers.Formal_Vectors (Positive, Pos64);
-   use Pos64_Vectors;
+   -- use Pos64_Vectors;
    subtype Pos64_Vector is Pos64_Vectors.Vector (Max + 1);
+   use all type Pos64_Vector;
 
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.
@@ -73,7 +74,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Headed_To_First_Id : Boolean := False;
    end record;
 
-   function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector;
+   -- function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector;
 
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;

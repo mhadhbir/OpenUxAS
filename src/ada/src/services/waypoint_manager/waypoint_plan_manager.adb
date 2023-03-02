@@ -6,6 +6,13 @@ with Ada.Text_IO;                use Ada.Text_IO;
 
 package body Waypoint_Plan_Manager with SPARK_Mode is
 
+   use all type Pos64_WP_Map;
+   use all type Pos64_WP_Maps.Formal_Model.M.Map;
+   use Pos64_WP_Maps.Formal_Model;
+   use all type Pos64_Nat64_Map;
+   use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
+   use Pos64_Nat64_Maps.Formal_Model;
+
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
@@ -16,22 +23,22 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
    is
-     ((for all I of M => Pos64_Nat64_Maps.Formal_Model.M.Has_Key (N, I)) and then
-      (for all I of N => Pos64_WP_Maps.Formal_Model.M.Has_Key (M, I)));
+     ((for all I of M => Has_Key (N, I)) and then
+      (for all I of N => Has_Key (M, I)));
 
-   function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector is
-      Result : Pos64_Vector;
-   begin
-
-      for WP of MC.WaypointList loop
-         if WP.Number > 0 and then WP.NextWaypoint >= 0 then
-            Pos64_Vectors.Append (Result, WP.Number);
-         end if;
-      end loop;
-
-      return Result;
-
-   end Valid_Waypoint_Ids;
+   --  function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector is
+   --     Result : Pos64_Vector;
+   --  begin
+   --
+   --     for WP of MC.WaypointList loop
+   --        if WP.Number > 0 and then WP.NextWaypoint >= 0 then
+   --           Pos64_Vectors.Append (Result, WP.Number);
+   --        end if;
+   --     end loop;
+   --
+   --     return Result;
+   --
+   --  end Valid_Waypoint_Ids;
 
    ----------------------------------
    -- Extract_Mission_Command_Info --
@@ -43,23 +50,22 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      Pre => Length (State.MC.WaypointList) <= Max,
      Post =>
          State.MC = State'Old.MC and then
-         (for all Id of Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint) =>
+         (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                      Pos64_WP_Maps.Formal_Model.M.Get (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint), Id))) and then
+                      Get (Model (State.Id_To_Waypoint), Id))) and then
          Same_Keys
-           (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint),
-            Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id)) and then
-         (for all Id of Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id) =>
-            Pos64_Nat64_Maps.Formal_Model.Element (Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id), Id) =
-              Pos64_WP_Maps.Formal_Model.Element (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint), Id).NextWaypoint);
+           (Model (State.Id_To_Waypoint), Model (State.Id_To_Next_Id)) and then
+         (for all Id of Model (State.Id_To_Next_Id) =>
+            Element (Model (State.Id_To_Next_Id), Id) =
+              Element (Model (State.Id_To_Waypoint), Id).NextWaypoint);
 
    procedure Extract_MissionCommand_Maps
      (State : in out Waypoint_Plan_Manager_State)
    is
       WP : Waypoint;
       Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
-      use Pos64_WP_Maps.Formal_Model;
-      use Pos64_Nat64_Maps.Formal_Model;
+      -- use Pos64_WP_Maps.Formal_Model;
+      -- use Pos64_Nat64_Maps.Formal_Model;
    begin
 
       Clear (State.Id_To_Next_Id);
@@ -84,11 +90,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (for all Id of Model (State.Id_To_Waypoint) =>
               Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-              Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
+              Get (Model (State.Id_To_Waypoint), Id)));
          pragma Loop_Invariant
            (Same_Keys
-              (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint),
-               Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id)));
+              (Model (State.Id_To_Waypoint),
+               Model (State.Id_To_Next_Id)));
          pragma Loop_Invariant
            (for all Id of Model (State.Id_To_Next_Id) =>
                 Element (Model (State.Id_To_Next_Id), Id) =
@@ -121,10 +127,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       State.MC := MC;
       Extract_MissionCommand_Maps (State);
-
-      pragma Assert (for all Id of State.Id_To_Waypoint =>
-                       Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                         Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
       State.New_Command := True;
       State.Next_Segment_Id := First_Id;
