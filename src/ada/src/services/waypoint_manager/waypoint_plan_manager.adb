@@ -16,7 +16,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
    is
-     (for all I of M => Pos64_Nat64_Maps.Formal_Model.M.Has_Key (N, I));
+     ((for all I of M => Pos64_Nat64_Maps.Formal_Model.M.Has_Key (N, I)) and then
+      (for all I of N => Pos64_WP_Maps.Formal_Model.M.Has_Key (M, I)));
 
    function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector is
       Result : Pos64_Vector;
