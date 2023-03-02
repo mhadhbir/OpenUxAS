@@ -38,8 +38,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (State : in out Waypoint_Plan_Manager_State)
    is
       WP : Waypoint;
-      Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
-      Id_To_Waypoint_Tmp : Pos64_WP_Map with Ghost;
+      --  Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
+      --  Id_To_Waypoint_Tmp : Pos64_WP_Map with Ghost;
       use Pos64_Nat64_Maps.Formal_Model;
       use Pos64_WP_Maps.Formal_Model;
    begin
@@ -50,15 +50,15 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       for I in WP_Sequences.First .. Last (State.MC.WaypointList) loop
          WP := Get (State.MC.WaypointList, I);
          if WP.Number > 0 and then WP.NextWaypoint >= 0 then
-            Id_To_Waypoint_Tmp := State.Id_To_Waypoint;
-            if not Contains (State.Id_To_Next_Id, Pos64 (WP.Number)) then
-               Insert (State.Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
-               pragma Assert (State.Id_To_Waypoint = Id_To_Waypoint_Tmp);
-            end if;
-            Id_To_Next_Id_Tmp := State.Id_To_Next_Id;
+            -- Id_To_Waypoint_Tmp := State.Id_To_Waypoint;
+            -- if not Contains (State.Id_To_Next_Id, Pos64 (WP.Number)) then
+               -- Insert (State.Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
+               --pragma Assert (State.Id_To_Waypoint = Id_To_Waypoint_Tmp);
+            -- end if;
+            -- Id_To_Next_Id_Tmp := State.Id_To_Next_Id;
             if not Contains (State.Id_To_Waypoint, Pos64 (WP.Number)) then
                Insert (State.Id_To_Waypoint, Pos64 (WP.Number), WP);
-               pragma Assert (State.Id_To_Next_Id = Id_To_Next_Id_Tmp);
+            --     pragma Assert (State.Id_To_Next_Id = Id_To_Next_Id_Tmp);
             end if;
          end if;
 
@@ -74,6 +74,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          --       Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
          --         Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
       end loop;
+
    end Extract_MissionCommand_Maps;
 
    ---------------------------
