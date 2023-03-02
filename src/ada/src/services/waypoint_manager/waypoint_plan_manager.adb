@@ -6,36 +6,73 @@ with Ada.Text_IO;                use Ada.Text_IO;
 
 package body Waypoint_Plan_Manager with SPARK_Mode is
 
+   function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector is
+      Result : Pos64_Vector;
+   begin
+
+      for WP of MC.WaypointList loop
+         if WP.Number > 0 and then WP.NextWaypoint >= 0 then
+            Pos64_Vectors.Append (Result, WP.Number);
+         end if;
+      end loop;
+
+      return Result;
+
+   end Valid_Waypoint_Ids;
+
    ----------------------------------
    -- Extract_Mission_Command_Info --
    ----------------------------------
 
    procedure Extract_MissionCommand_Maps
-     (State : in out Waypoint_Plan_Manager_State;
-      MC : MissionCommand);
+     (State : in out Waypoint_Plan_Manager_State)
+     with
+       -- Global => null,
+       Pre => Length (State.MC.WaypointList) <= Max,
+       Post => State.MC = State'Old.MC and then
+       (for all Id of State.Id_To_Waypoint =>
+          Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+                    Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
    procedure Extract_MissionCommand_Maps
-     (State : in out Waypoint_Plan_Manager_State;
-      MC : MissionCommand)
+     (State : in out Waypoint_Plan_Manager_State)
    is
       WP : Waypoint;
+      Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
+      Id_To_Waypoint_Tmp : Pos64_WP_Map with Ghost;
+      use Pos64_Nat64_Maps.Formal_Model;
+      use Pos64_WP_Maps.Formal_Model;
    begin
 
       Clear (State.Id_To_Next_Id);
       Clear (State.Id_To_Waypoint);
 
-      for I in WP_Sequences.First .. Last (MC.WaypointList) loop
-         WP := Get (MC.WaypointList, I);
+      for I in WP_Sequences.First .. Last (State.MC.WaypointList) loop
+         WP := Get (State.MC.WaypointList, I);
          if WP.Number > 0 and then WP.NextWaypoint >= 0 then
+            Id_To_Waypoint_Tmp := State.Id_To_Waypoint;
             if not Contains (State.Id_To_Next_Id, Pos64 (WP.Number)) then
                Insert (State.Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
+               pragma Assert (State.Id_To_Waypoint = Id_To_Waypoint_Tmp);
             end if;
+            Id_To_Next_Id_Tmp := State.Id_To_Next_Id;
             if not Contains (State.Id_To_Waypoint, Pos64 (WP.Number)) then
                Insert (State.Id_To_Waypoint, Pos64 (WP.Number), WP);
+               pragma Assert (State.Id_To_Next_Id = Id_To_Next_Id_Tmp);
             end if;
          end if;
+
          pragma Loop_Invariant (Integer (Length (State.Id_To_Next_Id)) <= I - WP_Sequences.First + 1);
          pragma Loop_Invariant (Integer (Length (State.Id_To_Waypoint)) <= I - WP_Sequences.First + 1);
+         pragma Loop_Invariant (State.MC = State.MC'Loop_Entry);
+         pragma Loop_Invariant
+           (for all Id of Model (State.Id_To_Waypoint) =>
+              Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+              Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
+         --  pragma Loop_Invariant
+         --    (for all Id of Model (State.Id_To_Next_Id) =>
+         --       Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+         --         Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
       end loop;
    end Extract_MissionCommand_Maps;
 
@@ -54,7 +91,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    begin
 
       State.MC := MC;
-      Extract_MissionCommand_Maps (State, MC);
+      Extract_MissionCommand_Maps (State);
+
+      pragma Assert (for all Id of State.Id_To_Waypoint =>
+                       Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+                         Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+
       State.New_Command := True;
       State.Next_Segment_Id := First_Id;
       State.Next_First_Id := First_Id;
@@ -69,6 +111,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
              or else Successor (Ids, First_Id) = First_Id
          then
             -- First_Id has no successors. Return.
+            -- What if it has a predecessor but no successors?
+            -- I don't think I handled this correctly.
+            -- I might have reasoned that if it points to itself,
+            -- then it's its own predecessor, but that might not be true.
             Append (State.Prefix, First_Id);
             return;
          else
