@@ -6,6 +6,18 @@ with Ada.Text_IO;                use Ada.Text_IO;
 
 package body Waypoint_Plan_Manager with SPARK_Mode is
 
+   function Same_Keys
+     (M : Pos64_WP_Maps.Formal_Model.M.Map;
+      N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
+   with Ghost,
+     Annotate => (GNATprove, Inline_For_Proof);
+
+   function Same_Keys
+     (M : Pos64_WP_Maps.Formal_Model.M.Map;
+      N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
+   is
+     (for all I of M => Pos64_Nat64_Maps.Formal_Model.M.Has_Key (N, I));
+
    function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector is
       Result : Pos64_Vector;
    begin
@@ -38,10 +50,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (State : in out Waypoint_Plan_Manager_State)
    is
       WP : Waypoint;
-      --  Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
-      --  Id_To_Waypoint_Tmp : Pos64_WP_Map with Ghost;
-      use Pos64_Nat64_Maps.Formal_Model;
+      Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
       use Pos64_WP_Maps.Formal_Model;
+      use Pos64_Nat64_Maps.Formal_Model;
    begin
 
       Clear (State.Id_To_Next_Id);
@@ -50,15 +61,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       for I in WP_Sequences.First .. Last (State.MC.WaypointList) loop
          WP := Get (State.MC.WaypointList, I);
          if WP.Number > 0 and then WP.NextWaypoint >= 0 then
-            -- Id_To_Waypoint_Tmp := State.Id_To_Waypoint;
-            -- if not Contains (State.Id_To_Next_Id, Pos64 (WP.Number)) then
-               -- Insert (State.Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
-               --pragma Assert (State.Id_To_Waypoint = Id_To_Waypoint_Tmp);
-            -- end if;
-            -- Id_To_Next_Id_Tmp := State.Id_To_Next_Id;
-            if not Contains (State.Id_To_Waypoint, Pos64 (WP.Number)) then
+            Id_To_Next_Id_Tmp := State.Id_To_Next_Id;
+            if not Contains (State.Id_To_Waypoint, Pos64 (WP.Number)) and then
+              not Contains (State.Id_To_Next_Id, Pos64 (WP.Number))
+            then
                Insert (State.Id_To_Waypoint, Pos64 (WP.Number), WP);
-            --     pragma Assert (State.Id_To_Next_Id = Id_To_Next_Id_Tmp);
+               pragma Assert (State.Id_To_Next_Id = Id_To_Next_Id_Tmp);
+               Insert (State.Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
             end if;
          end if;
 
@@ -69,11 +78,19 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (for all Id of Model (State.Id_To_Waypoint) =>
               Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
               Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
-         --  pragma Loop_Invariant
-         --    (for all Id of Model (State.Id_To_Next_Id) =>
-         --       Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-         --         Pos64_WP_Maps.Formal_Model.M.Get (Model (State.Id_To_Waypoint), Id)));
+         pragma Loop_Invariant
+           (Same_Keys
+              (Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint),
+               Pos64_Nat64_Maps.Formal_Model.Model (State.Id_To_Next_Id)));
       end loop;
+
+      --  for Id in State.Id_To_Waypoint loop
+      --     Insert (State.Id_To_Next_Id,
+      --             Key (State.Id_To_Waypoint, Id),
+      --             Element (State.Id_To_Waypoint, Id).NextWaypoint);
+      --     pragma Loop_Invariant (Integer (Length (State.Id_To_Next_Id)) =
+      --                              Integer (Id.Node) - Integer (First (State.Id_To_Waypoint).Node));
+      --  end loop;
 
    end Extract_MissionCommand_Maps;
 

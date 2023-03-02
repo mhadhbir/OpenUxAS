@@ -52,6 +52,10 @@ package Waypoint_Plan_Manager with SPARK_Mode is
 
    package Pos64_Nat64_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
+   package Pos_Nat_Maps_P renames Pos64_Nat64_Maps.Formal_Model.P;
+   package Pos_Nat_Maps_K renames Pos64_Nat64_Maps.Formal_Model.K;
+   package Pos_Nat_Maps_M is new Ada.Containers.Functional_Maps
+     (Pos64, Nat64);
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new Ada.Containers.Formal_Vectors (Positive, Pos64);
