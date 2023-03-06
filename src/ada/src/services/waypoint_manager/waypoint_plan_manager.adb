@@ -12,6 +12,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    use all type Pos64_Nat64_Map;
    use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
    use Pos64_Nat64_Maps.Formal_Model;
+   use Pos64_Vectors.Formal_Model;
 
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
