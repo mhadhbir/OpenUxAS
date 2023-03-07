@@ -39,9 +39,14 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new Ada.Containers.Formal_Vectors (Positive, Pos64);
-   -- use Pos64_Vectors;
    subtype Pos64_Vector is Pos64_Vectors.Vector (Max + 1);
-   use all type Pos64_Vector;
+   use Pos64_Vectors;
+
+   use Pos64_WP_Maps.Formal_Model;
+   use all type Pos64_Nat64_Map;
+   use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
+   use Pos64_Nat64_Maps.Formal_Model;
+   use Pos64_Vectors.Formal_Model;
 
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.
@@ -68,8 +73,10 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       New_Command : Boolean;
       Next_Segment_Id : Nat64 := 0;
       Next_First_Id : Nat64 := 0;
-      Prefix : Pos64_Vector;   -- Formal vector
-      Cycle : Pos64_Vector;    -- Formal vector
+      --  Prefix : Pos64_Vector;   -- Formal vector
+      --  Cycle : Pos64_Vector;    -- Formal vector
+      Path : Pos64_Vector;
+      Cycle_Id : Nat64;
       Segment : Pos64_Vector;  -- Formal vector
       Headed_To_First_Id : Boolean := False;
    end record;
@@ -85,9 +92,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          MC.FirstWaypoint > 0,
        Post =>
          State.MC = MC and then
-           (for all Id of Pos64_WP_Maps.Formal_Model.Model (State.Id_To_Waypoint) =>
-              Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                        Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+         (for all Id of Model (State.Id_To_Waypoint) =>
+            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+                      Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id)))) and then
+           (if not Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
+              then State.Next_Segment_Id = 0 and State.Next_First_Id = 0 and
+                State.Cycle_Id = 0 and Is_Empty (State.Path)) and then
+           (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
+              then (First_Element (State.Path) = MC.FirstWaypoint or else
+                Element (State.Id_To_Next_Id, First_Element (State.Path)) = MC.FirstWaypoint));
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
