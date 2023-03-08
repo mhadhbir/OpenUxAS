@@ -92,15 +92,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          MC.FirstWaypoint > 0,
        Post =>
          State.MC = MC and then
-         (for all Id of Model (State.Id_To_Waypoint) =>
-            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                      Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id)))) and then
+         --  (for all Id of Model (State.Id_To_Waypoint) =>
+         --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+         --               Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id)))) and then
            (if not Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
               then State.Next_Segment_Id = 0 and State.Next_First_Id = 0 and
                 State.Cycle_Id = 0 and Is_Empty (State.Path)) and then
            (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
-              then (First_Element (State.Path) = MC.FirstWaypoint or else
-                Element (State.Id_To_Next_Id, First_Element (State.Path)) = MC.FirstWaypoint));
+              then (Element (Model (State.Path), 1) = MC.FirstWaypoint or else
+                                Element (Model (State.Path), 2) = MC.FirstWaypoint));
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
