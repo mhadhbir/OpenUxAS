@@ -14,19 +14,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
-   --  pragma Assert (Element (Model (Id_List_Tmp), 1) = Element (Model (Id_List), 1) or else
-   --                 Element (Model (Id_List_Tmp), 2) = Element (Model (Id_List), 2));
-   --
-   --  pragma Assert (Element (Model (Id_List_Tmp), 1) = First_Id or else
-   --                 Element (Model (Id_List_Tmp), 2) = First_Id);
-   --
-   --  pragma Assert (Element (Model (Id_List), 1) = First_Id or else
-   --                 Element (Model (Id_List), 2) = First_Id);
-
-   --  procedure Prove_First_Element (M, N : Pos64_Vector)
-   --    with
-   --      Pre =>
-
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
@@ -166,9 +153,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       if not Contains (Ids, First_Id) then
          State.Next_Segment_Id := 0;
          State.Next_First_Id := 0;
-         pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                           (Element (Model (Id_List), 1) = First_Id or else
-                           Element (Model (Id_List), 2) = First_Id));
          return;
       end if;
 
@@ -187,9 +171,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Append (Id_List, First_Id);
       pragma Assert (not Is_Empty (Id_List));
       pragma Assert (Length (Id_List) <= 2);
-
-      pragma Assert (Element (Model (Id_List), 1) = First_Id or else
-                     Element (Model (Id_List), 2) = First_Id);
 
       pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
                        (Element (Model (Id_List), 1) = First_Id or else
@@ -210,17 +191,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                -- Candidate successor is 0, unknown, or points to itself.
                -- Return the path with no cycle.
                State.Path := Id_List;
-               pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                       (Element (Model (Id_List), 1) = First_Id or else
-                        Element (Model (Id_List), 2) = First_Id));
                return;
             elsif Contains (Id_List, Successor  (Ids, Last_Element (Id_List))) then
                -- There is a cycle in the list.
                State.Cycle_Id := Successor (Ids, Last_Element (Id_List));
                State.Path := Id_List;
-               pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                       (Element (Model (Id_List), 1) = First_Id or else
-                        Element (Model (Id_List), 2) = First_Id));
                return;
             else
                -- Found a successor that's not a cycle.
@@ -234,9 +209,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          else
             -- Can't find a successor. Return the path with no cycle.
             State.Path := Id_List;
-            pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                       (Element (Model (Id_List), 1) = First_Id or else
-                        Element (Model (Id_List), 2) = First_Id));
             return;
          end if;
 
@@ -245,19 +217,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant (Length (Id_List) <= Max - Length (Ids) + 1);
          pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
                                 Element (Model (Id_List), 2) = First_Id);
-         pragma Loop_Invariant (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                                  (Element (Model (Id_List), 1) = First_Id or else
-                                   Element (Model (Id_List), 2) = First_Id));
          pragma Loop_Invariant
            (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
                       Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
       end loop;
-
-      pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                       (Element (Model (Id_List), 1) = First_Id or else
-                        Element (Model (Id_List), 2) = First_Id));
 
       State.Path := Id_List;
 
