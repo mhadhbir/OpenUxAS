@@ -48,6 +48,10 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
+   --  function Model (M : Int64_Formal_Set_Map) return Int_Set_Maps_M.Map with
+   --    Post => Same_Mappings
+   --      (Int64_Formal_Set_Maps.Formal_Model.Model (M), Model'Result);
+
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.
       -- Value must be in [2, Max - 1]
