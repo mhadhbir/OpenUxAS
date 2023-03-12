@@ -183,89 +183,125 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       pragma Assert (for all Id of Model (Ids) =>
                        Contains (Model (State.Id_To_Next_Id), Id));
 
-      pragma Assert (for all Id of Model (Id_List) =>
-                       Contains (Model (State.Id_To_Next_Id), Id));
-
       -- This following is true and proves as an assert, but it's slow.
       -- I'm going to make it an Assume for now to speed things up.
       pragma Assume
         (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                      Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+           Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+
+      pragma Assert (Contains (Ids, Last_Element (Id_List)));
 
       while Length (Ids) > 0 loop
 
-         if Contains (Ids, Last_Element (Id_List)) then
-            if Successor (Ids, Last_Element (Id_List)) = 0
-              or else not Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List))))
-              or else Successor (Ids, Last_Element (Id_List)) = Last_Element (Id_List)
-            then
-               -- Candidate successor is 0, unknown, or points to itself.
-               -- Return the path with no cycle.
-               State.Path := Id_List;
-               pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                       Element (Model (Id_List), I + 1));
-               return;
-            elsif Contains (Id_List, Successor  (Ids, Last_Element (Id_List))) then
-               -- There is a cycle in the list.
-               State.Cycle_Id := Successor (Ids, Last_Element (Id_List));
-               State.Path := Id_List;
-               pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                       Element (Model (Id_List), I + 1));
-               return;
-            else
-               -- Found a successor that's not a cycle.
-               declare
-                  Current_Id : Pos64 := Last_Element (Id_List);
-               begin
-                  Append (Id_List, Successor (Ids, Last_Element (Id_List)));
-
-                  -- It's having problems proving it can do the Pos64 assertion,
-                  -- so I think the issue may be here.
-                  pragma Assert (Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List)))));
-
-                  pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 2 =>
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                                  Element (Model (Id_List), I + 1));
-                  pragma Assert (
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), Last_Index (Id_List) - 1)) =
-                                   Element (Model (Id_List), Last_Index (Id_List)));
-
-                  -- If you don't have both the above asserts, the loop invariant doesn't prove.
-                  -- One time, the provers got very angry about all the analogous assertions.
-                  -- They couldn't prove 'Contains (Container, Key)'. This may be a hint that
-                  -- the key being valid is actually where the provers are struggling.
-                  -- It might be that I could condense this with a lemma for readability and proof speed.
-                  Delete (Ids, Current_Id);
-               end;
-            end if;
-         else
-            -- Can't find a successor. Return the path with no cycle.
+         if Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = 0
+           or else Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = Last_Element (Id_List)
+         then
+            -- Candidate successor is 0 or points to itself.
+            -- Return the path with no cycle.
             State.Path := Id_List;
             return;
+         elsif not Contains (State.Id_To_Next_Id,
+                             Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
+         then
+            -- Candidate successor can't be found
+            State.Path := Id_List;
+            return;
+         elsif Contains (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)))
+         then
+            -- There is a cycle in the list.
+            State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
+            State.Path := Id_List;
+            --  pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
+            --          Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
+            --          Element (Model (Id_List), I + 1));
+            return;
+         elsif Contains (State.Id_To_Next_Id, Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
+         then
+            -- Found a successor that's not a cycle.
+            declare
+               Current_Id : constant Pos64 := Last_Element (Id_List);
+            begin
+
+               pragma Assert
+                 (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
+                    Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
+
+               Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
+
+               pragma Assert
+                 (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
+                    Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
+
+               --  pragma Assert
+               --    (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
+               --         Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
+
+               --  pragma Assert
+               --    (Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List))));
+
+               -- It's having problems proving it can do the Pos64 assertion,
+               -- so I think the issue may be here.
+               -- pragma Assert (Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List)))));
+
+               pragma Assert
+                 (Current_Id = Element (Model (Id_List), Last (Model (Id_List)) - 1));
+
+               --  pragma Assert
+               --    (Contains (State.Id_To_Next_Id, Last_Element (Id_List)));
+               --
+               --  pragma Assert (for all Id of Model (Id_List) =>
+               --                     Contains (Model (State.Id_To_Next_Id), Id));
+
+               pragma Assert
+                 (Successor (State.Id_To_Next_Id, Current_Id) =
+                      Element (Model (Id_List), Last (Model (Id_List))));
+
+               pragma Assert
+                 (Successor (State.Id_To_Next_Id, Element (Model (Id_List), Last (Model (Id_List)) - 1)) =
+                      Element (Model (Id_List), Last (Model (Id_List))));
+
+               -- If you don't have both the above asserts, the loop invariant doesn't prove.
+               -- One time, the provers got very angry about all the analogous assertions.
+               -- They couldn't prove 'Contains (Container, Key)'. This may be a hint that
+               -- the key being valid is actually where the provers are struggling.
+               -- It might be that I could condense this with a lemma for readability and proof speed.
+               Delete (Ids, Current_Id);
+
+            end;
+         else
+            raise Program_Error;
          end if;
 
          pragma Loop_Invariant (not Is_Empty (Id_List));
          pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
          pragma Loop_Invariant (Length (Id_List) <= Max - Length (Ids) + 1);
-         pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
-                                Element (Model (Id_List), 2) = First_Id);
+         --  pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
+         --                         Element (Model (Id_List), 2) = First_Id);
+         --  pragma Loop_Invariant
+         --    (for all Id of Model (State.Id_To_Waypoint) =>
+         --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+         --       Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+
+         --  pragma Loop_Invariant (for all Id of Model (Ids) =>
+         --                           Contains (Model (State.Id_To_Next_Id), Id));
+         --
+
          pragma Loop_Invariant
-           (for all Id of Model (State.Id_To_Waypoint) =>
-            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-              Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+           (Contains (State.Id_To_Next_Id, Element (Model (Id_List), Last (Model (Id_List)))));
 
-         pragma Loop_Invariant (for all Id of Model (Ids) =>
-                                  Contains (Model (State.Id_To_Next_Id), Id));
+         pragma Loop_Invariant
+           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) - 1 =>
+              Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
 
-         pragma Loop_Invariant (for all Id of Model (Id_List) =>
-                                  Contains (Model (State.Id_To_Next_Id), Id));
+         pragma Loop_Invariant
+           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
+                Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
 
-         pragma Loop_Invariant (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                                  Element (Model (Id_List), I + 1));
+         pragma Loop_Invariant
+           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) - 1 =>
+              Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
+                                              Element (Model (Id_List), I + 1));
 
          pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
       end loop;
