@@ -157,9 +157,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (State : in out Waypoint_Plan_Manager_State;
       MC : MissionCommand)
    is
-      First_Id : Pos64 := MC.FirstWaypoint;
-      Id_List, Id_List_Tmp : Pos64_Vector;
-      Ids : Pos64_Nat64_Map;
+      First_Id : constant Pos64 := MC.FirstWaypoint;
+      Id_List : Pos64_Vector;
+      Id_List_Tmp : Pos64_Vector with Ghost;
       function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64 renames Element;
 
       use Pos64_Vectors.Formal_Model.M;
@@ -173,11 +173,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       State.Next_First_Id := First_Id;
       Clear (State.Path);
       State.Cycle_Id := 0;
-      Ids := State.Id_To_Next_Id;
 
       -- Check whether First_Id can be found.
       -- If not, set relevant values to 0 and return.
-      if not Contains (Ids, First_Id) then
+      if not Contains (State.Id_To_Next_Id, First_Id) then
          State.Next_Segment_Id := 0;
          State.Next_First_Id := 0;
          return;
@@ -185,11 +184,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       -- Check whether there is a predecessor to First_Id that isn't just
       -- First_Id itself. If so, it becomes the first element of the list.
-      for Id of Ids loop
-         if not (Id = First_Id) and then Successor (Ids, Id) = First_Id then
+      for Id of State.Id_To_Next_Id loop
+         if not (Id = First_Id) and then
+           Successor (State.Id_To_Next_Id, Id) = First_Id
+         then
             Append (Id_List, Id);
             State.Next_Segment_Id := Id;
-            Delete (Ids, Id);
             exit;
          end if;
       end loop;
@@ -207,9 +207,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                        Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
                        Element (Model (Id_List), I + 1));
 
-      pragma Assert (for all Id of Model (Ids) =>
-                       Contains (Model (State.Id_To_Next_Id), Id));
-
       -- This following is true and proves as an assert, but it's slow.
       -- I'm going to make it an Assume for now to speed things up.
       pragma Assume
@@ -217,9 +214,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
            Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
-      pragma Assert (Contains (Ids, Last_Element (Id_List)));
+      -- pragma Assert (Contains (Ids, Last_Element (Id_List)));
 
-      while Length (Ids) > 0 loop
+      while Length (Id_List) < Length (State.Id_To_Next_Id) loop
 
          if Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = 0
            or else Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = Last_Element (Id_List)
@@ -260,9 +257,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
                Lemma_List_Still_Linked_After_Append
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
-
-               Delete (Ids, Current_Id);
-
             end;
          else
             raise Program_Error;
@@ -270,9 +264,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
          pragma Loop_Invariant (not Is_Empty (Id_List));
          pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
-         pragma Loop_Invariant (Length (Id_List) <= Max - Length (Ids) + 1);
-         --  pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
-         --                         Element (Model (Id_List), 2) = First_Id);
+         pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
+                                Element (Model (Id_List), 2) = First_Id);
          --  pragma Loop_Invariant
          --    (for all Id of Model (State.Id_To_Waypoint) =>
          --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
@@ -287,8 +280,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                                               Element (Id_List, I + 1));
 
          pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
-
-         pragma Loop_Invariant (Contains (Ids, Last_Element (Id_List)));
 
       end loop;
 
