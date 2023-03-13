@@ -207,6 +207,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                        Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
                        Element (Model (Id_List), I + 1));
 
+      pragma Assert
+        (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
+
       -- This following is true and proves as an assert, but it's slow.
       -- I'm going to make it an Assume for now to speed things up.
       pragma Assume
@@ -248,7 +251,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                Id_List_Tmp := Id_List;
 
                pragma Assert
-                 (for all I of Id_List => Contains (State.Id_To_Next_Id, I));
+                 (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
 
                Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
 

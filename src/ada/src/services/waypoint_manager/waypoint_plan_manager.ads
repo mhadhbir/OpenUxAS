@@ -26,16 +26,14 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    subtype Pos64_WP_Map is Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
      with Predicate =>
               (for all Id of Pos64_WP_Map =>
-                 (Element (Pos64_WP_Map, Id).Number = Id
-                  and
-                    Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
+                 (Element (Pos64_WP_Map, Id).Number = Id and
+                      Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
 
    package Pos64_Nat64_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
    package Pos_Nat_Maps_P renames Pos64_Nat64_Maps.Formal_Model.P;
    package Pos_Nat_Maps_K renames Pos64_Nat64_Maps.Formal_Model.K;
-   package Pos_Nat_Maps_M is new Ada.Containers.Functional_Maps
-     (Pos64, Nat64);
+   package Pos_Nat_Maps_M is new Ada.Containers.Functional_Maps (Pos64, Nat64);
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new Ada.Containers.Formal_Vectors (Positive, Pos64);
@@ -104,21 +102,17 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    end record;
 
    type Waypoint_Plan_Manager_State is record
-      MC : MissionCommand; -- MC.WaypointList is a WP_Seq, Functional_Vectors.Sequence of Waypoint messages
-      Id_To_Waypoint : Pos64_WP_Map;   -- Formal hashed Map
-      Id_To_Next_Id : Pos64_Nat64_Map; -- Formal hashed map
+      MC : MissionCommand;
+      Id_To_Waypoint : Pos64_WP_Map;
+      Id_To_Next_Id : Pos64_Nat64_Map;
       New_Command : Boolean;
       Next_Segment_Id : Nat64 := 0;
       Next_First_Id : Nat64 := 0;
-      --  Prefix : Pos64_Vector;   -- Formal vector
-      --  Cycle : Pos64_Vector;    -- Formal vector
       Path : Pos64_Vector;
       Cycle_Id : Nat64;
-      Segment : Pos64_Vector;  -- Formal vector
+      Segment : Pos64_Vector;
       Headed_To_First_Id : Boolean := False;
    end record;
-
-   -- function Valid_Waypoint_Ids (MC : MissionCommand) return Pos64_Vector;
 
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;
