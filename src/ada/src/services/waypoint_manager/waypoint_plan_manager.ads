@@ -52,6 +52,40 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    --    Post => Same_Mappings
    --      (Int64_Formal_Set_Maps.Formal_Model.Model (M), Model'Result);
 
+   --  procedure Lemma_Map_Contains_Updated_List
+   --    (M : Pos64_Nat64_Map;
+   --     L1, L2 : Pos64_Vectors.Formal_Model.M.Sequence;
+   --     E : Pos64)
+   --    with Ghost,
+   --      Pre =>
+   --        -- Length (L1) < Capacity (L1) and then
+   --        Pos64_Vectors.Formal_Model.M.Length (L2) = Pos64_Vectors.Formal_Model.M.Length (L1) + 1 and then
+   --        L1 < L2 and then
+   --        Element (L2, Pos64_Vectors.Formal_Model.M.Last (L1) + 1) = E and then
+   --        Contains (M, E) and then
+   --        (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (L1) =>
+   --           Contains (M, Element (L1, I))),
+   --      Post =>
+   --        (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (L2) =>
+   --           Contains (M, Element (L2, I)));
+
+   procedure Lemma_Map_Contains_Updated_List
+     (M : Pos64_Nat64_Map;
+      L1, L2 : Pos64_Vectors.Vector;
+      E : Pos64)
+     with Ghost,
+       Pre =>
+         Length (L1) < Capacity (L1) and then
+         Length (L2) = Length (L1) + 1 and then
+         Model (L1) < Model (L2) and then
+         Element (Model (L2), Pos64_Vectors.Formal_Model.M.Last (Model (L1)) + 1) = E and then
+         Contains (M, E) and then
+         (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L1)) =>
+            Contains (M, Element (Model (L1), I))),
+       Post =>
+         (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L2)) =>
+            Contains (M, Element (Model (L2), I)));
+
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.
       -- Value must be in [2, Max - 1]
