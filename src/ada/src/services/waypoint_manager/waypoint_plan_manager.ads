@@ -50,48 +50,40 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    --    Post => Same_Mappings
    --      (Int64_Formal_Set_Maps.Formal_Model.Model (M), Model'Result);
 
-   procedure Lemma_Map_Contains_Updated_List
+   procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
-      L1, L2 : Pos64_Vectors.Vector;
-      E : Pos64)
+      L_Old, L_New : Pos64_Vectors.Vector;
+      New_Item : Pos64)
      with Ghost,
        Pre =>
-         Length (L1) < Capacity (L1) and then
-         Length (L2) = Length (L1) + 1 and then
-         Model (L1) < Model (L2) and then
-         Element (Model (L2), Pos64_Vectors.Formal_Model.M.Last (Model (L1)) + 1) = E and then
-         Contains (M, E) and then
-         (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L1)) =>
-            Contains (M, Element (Model (L1), I))),
+         Length (L_Old) < Capacity (L_Old) and then
+         Length (L_New) = Length (L_Old) + 1 and then
+         Model (L_Old) < Model (L_New) and then
+         Element (L_New, Last_Index (L_Old) + 1) = New_Item and then
+         Contains (M, New_Item) and then
+         (for all Item of Model (L_Old) => Contains (M, Item)),
        Post =>
-         (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L2)) =>
-            Contains (M, Element (Model (L2), I)));
+         (for all Item of Model (L_New) => Contains (M, Item));
 
-   procedure Lemma_List_Successors
+   procedure Lemma_List_Still_Linked_After_Append
      (M : Pos64_Nat64_Map;
-      L1, L2 : Pos64_Vectors.Vector;
-      E : Pos64)
+      L_Old, L_New : Pos64_Vectors.Vector;
+      New_Item : Pos64)
      with
        Ghost,
        Pre =>
-         Length (L1) < Capacity (L1) and then not Is_Empty (L1) and then
-         Length (L2) = Length (L1) + 1 and then
-         -- Length (L2) <= Capacity (M) and then
-         Model (L1) < Model (L2) and then
-         Element (Model (L2), Pos64_Vectors.Formal_Model.M.Last (Model (L1)) + 1) = E and then
-         (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L1)) =>
-            Contains (M, Element (Model (L1), I))) and then
-         -- Element (M, Last_Element (L1)) = E and then
-         Element (M, Pos64_Vectors.Formal_Model.M.Get (Pos64_Vectors.Formal_Model.Model (L1), Pos64_Vectors.Formal_Model.M.Last (Pos64_Vectors.Formal_Model.Model (L1)))) = E and then
-         (for all I in
-            Pos64_Vectors.Formal_Model.M.First ..
-            Pos64_Vectors.Formal_Model.M.Last (Model (L1)) - 1 =>
-            Element (M, Element (Model (L1), I)) = Element (Model (L1), I + 1)),
+         Length (L_Old) < Capacity (L_Old) and then
+         not Is_Empty (L_Old) and then
+         Length (L_New) = Length (L_Old) + 1 and then
+         Model (L_Old) < Model (L_New) and then
+         Element (L_New, Last_Index (L_Old) + 1) = New_Item and then
+         (for all Item of Model (L_Old) => Contains (M, Item)) and then
+         Element (M, Element (L_Old, Last_Index (L_Old))) = New_Item and then
+         (for all I in First_Index (L_Old) .. Last_Index (L_Old) - 1 =>
+            Element (M, Element (L_Old, I)) = Element (L_Old, I + 1)),
        Post =>
-           (for all I in
-              Pos64_Vectors.Formal_Model.M.First ..
-                Pos64_Vectors.Formal_Model.M.Last (Model (L2)) - 1 =>
-            Element (M, Element (Model (L2), I)) = Element (Model (L2), I + 1));
+         (for all I in First_Index (L_New) .. Last_Index (L_New) - 1 =>
+            Element (M, Element (L_New, I)) = Element (L_New, I + 1));
 
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.

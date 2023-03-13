@@ -23,23 +23,23 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    --     null;
    --  end Lemma_Map_Contains_Updated_List;
 
-   procedure Lemma_Map_Contains_Updated_List
+   procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
-      L1, L2 : Pos64_Vectors.Vector;
-      E : Pos64)
+      L_Old, L_New : Pos64_Vectors.Vector;
+      New_Item : Pos64)
    is
    begin
       null;
-   end Lemma_Map_Contains_Updated_List;
+   end Lemma_Map_Still_Contains_List_After_Append;
 
-   procedure Lemma_List_Successors
+   procedure Lemma_List_Still_Linked_After_Append
      (M : Pos64_Nat64_Map;
-      L1, L2 : Pos64_Vectors.Vector;
-      E : Pos64)
+      L_Old, L_New : Pos64_Vectors.Vector;
+      New_Item : Pos64)
    is
    begin
       null;
-   end Lemma_List_Successors;
+   end Lemma_List_Still_Linked_After_Append;
 
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
@@ -214,7 +214,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       -- I'm going to make it an Assume for now to speed things up.
       pragma Assume
         (for all Id of Model (State.Id_To_Waypoint) =>
-            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+           Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
            Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
       pragma Assert (Contains (Ids, Last_Element (Id_List)));
@@ -251,15 +251,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                Id_List_Tmp := Id_List;
 
                pragma Assert
-                 (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
-                    Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
+                 (for all I of Id_List => Contains (State.Id_To_Next_Id, I));
 
                Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
 
-               Lemma_Map_Contains_Updated_List
+               Lemma_Map_Still_Contains_List_After_Append
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
 
-               Lemma_List_Successors
+               Lemma_List_Still_Linked_After_Append
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
 
                Delete (Ids, Current_Id);
@@ -280,15 +279,17 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          --       Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
          pragma Loop_Invariant
-           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
-                Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
+           (for all E of Model (Id_List) => Contains (State.Id_To_Next_Id, E));
 
          pragma Loop_Invariant
-           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) - 1 =>
-              Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                                              Element (Model (Id_List), I + 1));
+           (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
+              Successor (State.Id_To_Next_Id, Element (Id_List, I)) =
+                                              Element (Id_List, I + 1));
 
          pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
+
+         pragma Loop_Invariant (Contains (Ids, Last_Element (Id_List)));
+
       end loop;
 
       State.Path := Id_List;
