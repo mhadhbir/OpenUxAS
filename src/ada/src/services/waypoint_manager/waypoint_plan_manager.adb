@@ -32,6 +32,15 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       null;
    end Lemma_Map_Contains_Updated_List;
 
+   procedure Lemma_List_Successors
+     (M : Pos64_Nat64_Map;
+      L1, L2 : Pos64_Vectors.Vector;
+      E : Pos64)
+   is
+   begin
+      null;
+   end Lemma_List_Successors;
+
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
@@ -253,6 +262,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                Lemma_Map_Contains_Updated_List
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
 
+               Lemma_List_Successors
+                 (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
+
                --  pragma Assert
                --    (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
                --       Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
@@ -311,10 +323,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
                 Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
 
-         --  pragma Loop_Invariant
-         --    (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) - 1 =>
-         --       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-         --                                       Element (Model (Id_List), I + 1));
+         pragma Loop_Invariant
+           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) - 1 =>
+              Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
+                                              Element (Model (Id_List), I + 1));
 
          pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
       end loop;
