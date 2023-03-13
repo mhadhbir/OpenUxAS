@@ -239,9 +239,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             -- There is a cycle in the list.
             State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
             State.Path := Id_List;
-            --  pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-            --          Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-            --          Element (Model (Id_List), I + 1));
             return;
          elsif Contains (State.Id_To_Next_Id, Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
          then
@@ -265,43 +262,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                Lemma_List_Successors
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
 
-               --  pragma Assert
-               --    (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
-               --       Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
-
-               --  pragma Assert
-               --    (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-               --         Contains (State.Id_To_Next_Id, Element (Model (Id_List), I)));
-
-               --  pragma Assert
-               --    (Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List))));
-
-               -- It's having problems proving it can do the Pos64 assertion,
-               -- so I think the issue may be here.
-               -- pragma Assert (Contains (State.Id_To_Next_Id, Pos64 (Successor (Ids, Last_Element (Id_List)))));
-
-               --  pragma Assert
-               --    (Current_Id = Element (Model (Id_List), Last (Model (Id_List)) - 1));
-
-               --  pragma Assert
-               --    (Contains (State.Id_To_Next_Id, Last_Element (Id_List)));
-               --
-               --  pragma Assert (for all Id of Model (Id_List) =>
-               --                     Contains (Model (State.Id_To_Next_Id), Id));
-
-               --  pragma Assert
-               --    (Successor (State.Id_To_Next_Id, Current_Id) =
-               --         Element (Model (Id_List), Last (Model (Id_List))));
-               --
-               --  pragma Assert
-               --    (Successor (State.Id_To_Next_Id, Element (Model (Id_List), Last (Model (Id_List)) - 1)) =
-               --         Element (Model (Id_List), Last (Model (Id_List))));
-
-               -- If you don't have both the above asserts, the loop invariant doesn't prove.
-               -- One time, the provers got very angry about all the analogous assertions.
-               -- They couldn't prove 'Contains (Container, Key)'. This may be a hint that
-               -- the key being valid is actually where the provers are struggling.
-               -- It might be that I could condense this with a lemma for readability and proof speed.
                Delete (Ids, Current_Id);
 
             end;

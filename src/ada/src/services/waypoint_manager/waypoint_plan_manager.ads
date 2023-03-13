@@ -43,8 +43,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Vectors;
 
    use Pos64_WP_Maps.Formal_Model;
-   use all type Pos64_Nat64_Map;
-   use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
@@ -76,14 +74,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      with
        Ghost,
        Pre =>
-         Length (L1) < Capacity (L1) and then
+         Length (L1) < Capacity (L1) and then not Is_Empty (L1) and then
          Length (L2) = Length (L1) + 1 and then
+         -- Length (L2) <= Capacity (M) and then
          Model (L1) < Model (L2) and then
          Element (Model (L2), Pos64_Vectors.Formal_Model.M.Last (Model (L1)) + 1) = E and then
-         -- Contains (M, E) and then
          (for all I in Pos64_Vectors.Formal_Model.M.First .. Pos64_Vectors.Formal_Model.M.Last (Model (L1)) =>
             Contains (M, Element (Model (L1), I))) and then
-         Element (M, Element (Model (L1), Pos64_Vectors.Formal_Model.M.Last (Model (L1)))) = E and then
+         -- Element (M, Last_Element (L1)) = E and then
+         Element (M, Pos64_Vectors.Formal_Model.M.Get (Pos64_Vectors.Formal_Model.Model (L1), Pos64_Vectors.Formal_Model.M.Last (Pos64_Vectors.Formal_Model.Model (L1)))) = E and then
          (for all I in
             Pos64_Vectors.Formal_Model.M.First ..
             Pos64_Vectors.Formal_Model.M.Last (Model (L1)) - 1 =>
