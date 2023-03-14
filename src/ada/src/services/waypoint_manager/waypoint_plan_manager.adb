@@ -14,14 +14,20 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
-   --  procedure Lemma_Map_Contains_Updated_List
-   --    (M : Pos64_Nat64_Map;
-   --     L1, L2 : Pos64_Vectors.Formal_Model.M.Sequence;
-   --     E : Pos64)
-   --  is
-   --  begin
-   --     null;
-   --  end Lemma_Map_Contains_Updated_List;
+   --  function Same_Mappings
+   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
+   --     N : Pos_WP_Maps_M.Map)
+   --  return Boolean is
+   --    ((for all I of M => Pos_WP_Maps_M.Has_Key (N, I))
+   --     and then (for all I of N => Contains (M, I))
+   --     and then
+   --       (for all I of N =>
+   --            (for all E of Pos_WP_Maps_M.Get (N, I) =>
+   --                    Contains (Element (M, I), E)))
+   --     and then
+   --       (for all I of N =>
+   --            (for all E of Element (M, I) =>
+   --                    Contains (Pos_WP_Maps_M.Get (N, I), E))));
 
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
@@ -78,11 +84,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      Pre => Length (State.MC.WaypointList) <= Max,
      Post =>
        State.MC = State'Old.MC and then
-       (for all Id of Model (State.Id_To_Waypoint) =>
+       (for all Id of State.Id_To_Waypoint =>
           Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-                    Get (Model (State.Id_To_Waypoint), Id))) and then
-         --  Same_Keys
-         --    (Model (State.Id_To_Waypoint), Model (State.Id_To_Next_Id)) and then
+                    Element (State.Id_To_Waypoint, Id))) and then
        (for all Id of Model (State.Id_To_Waypoint) =>
           Has_Key (Model (State.Id_To_Next_Id), Id)) and then
        (for all Id of Model (State.Id_To_Next_Id) =>
@@ -96,8 +100,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    is
       WP : Waypoint;
       Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
-      -- use Pos64_WP_Maps.Formal_Model;
-      -- use Pos64_Nat64_Maps.Formal_Model;
    begin
 
       Clear (State.Id_To_Next_Id);
@@ -123,10 +125,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (for all Id of Model (State.Id_To_Waypoint) =>
               Contains (State.MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
               Get (Model (State.Id_To_Waypoint), Id)));
-         --  pragma Loop_Invariant
-         --    (Same_Keys
-         --       (Model (State.Id_To_Waypoint),
-         --        Model (State.Id_To_Next_Id)));
          pragma Loop_Invariant
            (for all Id of Model (State.Id_To_Waypoint) =>
                 Has_Key (Model (State.Id_To_Next_Id), Id));
@@ -138,14 +136,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                 Element (Model (State.Id_To_Next_Id), Id) =
                 Element (Model (State.Id_To_Waypoint), Id).NextWaypoint);
       end loop;
-
-      --  for Id in State.Id_To_Waypoint loop
-      --     Insert (State.Id_To_Next_Id,
-      --             Key (State.Id_To_Waypoint, Id),
-      --             Element (State.Id_To_Waypoint, Id).NextWaypoint);
-      --     pragma Loop_Invariant (Integer (Length (State.Id_To_Next_Id)) =
-      --                              Integer (Id.Node) - Integer (First (State.Id_To_Waypoint).Node));
-      --  end loop;
 
    end Extract_MissionCommand_Maps;
 
@@ -165,6 +155,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       use Pos64_Vectors.Formal_Model.M;
    begin
 
+      Clear (State.Id_To_Waypoint);
       State.MC := MC;
       Extract_MissionCommand_Maps (State);
 
@@ -210,9 +201,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       pragma Assert
         (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
 
+      pragma Assert
+        (for all I in First_Index (Id_List) .. Last_Index (Id_List) =>
+             (for all J in First_Index (Id_List) .. Last_Index (Id_List) =>
+                    (if I /= J then Element (Id_List, I) /= Element (Id_List, J))));
+
       -- This following is true and proves as an assert, but it's slow.
       -- I'm going to make it an Assume for now to speed things up.
-      pragma Assume
+      pragma Assert
         (for all Id of Model (State.Id_To_Waypoint) =>
            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
            Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
@@ -269,6 +265,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
          pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
                                 Element (Model (Id_List), 2) = First_Id);
+         pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
+         pragma Loop_Invariant (State.Id_To_Waypoint = State'Loop_Entry.Id_To_Waypoint);
+
          --  pragma Loop_Invariant
          --    (for all Id of Model (State.Id_To_Waypoint) =>
          --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
@@ -282,7 +281,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Successor (State.Id_To_Next_Id, Element (Id_List, I)) =
                                               Element (Id_List, I + 1));
 
-         pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
+         pragma Loop_Invariant
+           (for all I in First_Index (Id_List) .. Last_Index (Id_List) =>
+                (for all J in First_Index (Id_List) .. Last_Index (Id_List) =>
+                   (if I /= J then Element (Id_List, I) /= Element (Id_List, J))));
 
       end loop;
 

@@ -44,9 +44,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
-   --  function Model (M : Int64_Formal_Set_Map) return Int_Set_Maps_M.Map with
+   --  function Same_Mappings
+   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
+   --     N : Pos_WP_Maps_M.Map)
+   --     return Boolean
+   --  with Ghost,
+   --       Annotate => (GNATprove, Inline_For_Proof);
+   --
+   --  function Model (M : Pos64_WP_Map) return Pos_WP_Maps_M.Map with
    --    Post => Same_Mappings
-   --      (Int64_Formal_Set_Maps.Formal_Model.Model (M), Model'Result);
+   --      (Pos64_WP_Maps.Formal_Model.Model (M), Model'Result);
 
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
@@ -122,14 +129,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Length (MC.WaypointList) <= Max and then
          MC.FirstWaypoint > 0,
        Post =>
+         -- Important properties for rebuilding MissionCommand later
          State.MC = MC and then
-         --  (for all Id of Model (State.Id_To_Waypoint) =>
-         --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-         --               Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id)))) and then
-           (if not Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
+         (for all Id of Model (State.Id_To_Waypoint) =>
+            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+                      Element (Model (State.Id_To_Waypoint), Id))) and then -- Element (Model (State.Id_To_Waypoint), Id)))) and then
+           (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
               then State.Next_Segment_Id = 0 and State.Next_First_Id = 0 and
                 State.Cycle_Id = 0 and Is_Empty (State.Path)) and then
-           (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint)
+           (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
               then (Element (Model (State.Path), 1) = MC.FirstWaypoint or else
                                 Element (Model (State.Path), 2) = MC.FirstWaypoint));
 
