@@ -109,16 +109,20 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    end record;
 
    type Waypoint_Plan_Manager_State is record
-      MC : MissionCommand;
-      Id_To_Waypoint : Pos64_WP_Map;
-      Id_To_Next_Id : Pos64_Nat64_Map;
-      New_Command : Boolean;
-      Next_Segment_Id : Nat64 := 0;
-      Next_First_Id : Nat64 := 0;
-      Path : Pos64_Vector;
-      Cycle_Id : Nat64;
-      Segment : Pos64_Vector;
-      Headed_To_First_Id : Boolean := False;
+      MC : MissionCommand;  -- Copy of most recent MissionCommand
+      Id_To_Waypoint : Pos64_WP_Map;   -- Id -> copy of Waypoint message from MC
+      Id_To_Next_Id : Pos64_Nat64_Map; -- Id -> successor waypoint Id in MC
+      Path : Pos64_Vector;  -- Ordered list of waypoint Ids, built using info in
+                            -- Id_To_Next_Id, starting from MC.FirstWaypoint
+      Cycle_Id : Nat64; -- If MC.WaypointList contains a cycle, this is the
+                        -- value in Path to cycle back to after reaching the end
+      Next_Segment_Id : Nat64 := 0; -- 1st Id of next segment
+      Next_First_Id : Nat64 := 0; -- 2nd Id of next segment (MC.FirstWaypoint)
+      Segment : Pos64_Vector; -- Next segment
+      New_Command : Boolean; -- Whether the most recent MissionCommand has yet
+                             -- been used to produce a segment
+      Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached
+                                             -- FirstWaypoint of next segment
    end record;
 
    procedure Handle_MissionCommand
@@ -129,14 +133,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Length (MC.WaypointList) <= Max and then
          MC.FirstWaypoint > 0,
        Post =>
-         State.MC = MC and then
+         State.MC = MC
+         and then
          -- Every Waypoint stored by Id in Id_To_Waypoint came from MC.WaypointList
          (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
                       Element (Model (State.Id_To_Waypoint), Id))) and then
-         -- Basic Id_To_Waypoint and Id_To_Next_Id should have the same keys,
-         -- and the values stored in Id_To_Next_Id should match the NextWaypoint
-         -- Id value for the corresponding Waypoint stored in Id_To_Waypoint
+         -- Basic relationships: Id_To_Waypoint and Id_To_Next_Id should have
+         -- the same keys, and each (Id, NextId) of Id_To_Next_Id should match
+         -- the corresponding (Id, Waypoint.NextWaypoint) of Id_To_Waypoint
          (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (Model (State.Id_To_Next_Id), Id)) and then
          (for all Id of Model (State.Id_To_Next_Id) =>
@@ -161,10 +166,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                  (if I /= J then Element (Model (State.Path), I) /=
                       Element (Model (State.Path), J)))) and then
          (for all I in First_Index (State.Path) .. Last_Index (State.Path) - 1 =>
-            Element (State.Id_To_Next_Id, Element (State.Path, I)) = Element (State.Path, I + 1)) and then
-         -- If the Cycle_Id is non-zero, it should be the successor to the last
-         -- Id in Path according to Id_To_Next_Id, and it should be in the path.
-         -- Otherwise, the successor to the last Id in Path should not be in Path.
+            Element (State.Id_To_Next_Id, Element (State.Path, I)) =
+              Element (State.Path, I + 1)) and then
+         -- If Cycle_Id is non-zero, it should be the successor to the last
+         -- Id in Path according to Id_To_Next_Id, and it should be in elsewhere
+         -- in Path. Otherwise, Path should be empty, or the successor to the
+         -- last Id in Path should be 0, itself, or not found in Id_To_Next_Id.
          (if State.Cycle_Id > 0 then
             State.Cycle_Id =
               Element (Model (State.Id_To_Next_Id),
@@ -175,17 +182,18 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                                   Pos_Vec_M.Last (Model (State.Path)),
                                   State.Cycle_Id)) and then
           (if State.Cycle_Id = 0 then
-             (if not Is_Empty (State.Path) then
-                  Element (Model (State.Id_To_Next_Id),
-                           Pos_Vec_M.Get (Model (State.Path),
-                                          Pos_Vec_M.Last (Model (State.Path)))) = 0
-              or else
-                Pos_Vec_M.Contains (Model (State.Path),
-                                    Pos_Vec_M.First,
-                                    Pos_Vec_M.Last (Model (State.Path)),
-                                    Element (Model (State.Id_To_Next_Id),
-                                             Pos_Vec_M.Get (Model (State.Path),
-                                                            Pos_Vec_M.Last (Model (State.Path)))))));
+             (Is_Empty (State.Path) or else
+              Element (Model (State.Id_To_Next_Id),
+                       Pos_Vec_M.Get (Model (State.Path),
+                                      Pos_Vec_M.Last (Model (State.Path)))) = 0 or else
+              Element (Model (State.Id_To_Next_Id),
+                       Pos_Vec_M.Get (Model (State.Path),
+                                      Pos_Vec_M.Last (Model (State.Path)))) =
+                       Pos_Vec_M.Get (Model (State.Path),
+                                      Pos_Vec_M.Last (Model (State.Path))) or else
+              not Contains (Model (State.Id_To_Next_Id),
+                            Pos_Vec_M.Get (Model (State.Path),
+                                           Pos_Vec_M.Last (Model (State.Path))))));
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;

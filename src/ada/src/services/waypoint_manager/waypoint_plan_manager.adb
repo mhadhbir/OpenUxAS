@@ -153,7 +153,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       First_Id : constant Pos64 := MC.FirstWaypoint;
       Id_List : Pos64_Vector;
       Id_List_Tmp : Pos64_Vector with Ghost;
-      function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64 renames Element;
+      function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
+                          renames Element;
 
       use Pos64_Vectors.Formal_Model.M;
       use all type Pos64_Vectors.Formal_Model.M.Sequence;
@@ -161,6 +162,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       Clear (State.Id_To_Waypoint);
       State.MC := MC;
+
       Extract_MissionCommand_Maps (State);
 
       State.New_Command := True;
@@ -174,6 +176,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       if not Contains (State.Id_To_Next_Id, First_Id) then
          State.Next_Segment_Id := 0;
          State.Next_First_Id := 0;
+
+         pragma Assert (State.Cycle_Id = 0 and Is_Empty (State.Path));
          return;
       end if;
 
@@ -212,14 +216,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
              (for all J in Pos_Vec_M.First .. Last (Model (Id_List)) =>
                     (if I /= J then Element (Model (Id_List), I) /= Element (Model (Id_List), J))));
 
-      -- This following is true and proves as an assert, but it's slow.
-      -- I'm going to make it an Assume for now to speed things up.
+      -- This following is true and proves as an assert at level 3 to 4, but
+      -- it's slow. I will make it an Assume for now to speed things up.
       pragma Assert
         (for all Id of Model (State.Id_To_Waypoint) =>
            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
            Element (Model (State.Id_To_Waypoint), Id)));
-
-      -- pragma Assert (Contains (Ids, Last_Element (Id_List)));
 
       while Length (Id_List) < Length (State.Id_To_Next_Id) loop
 
@@ -300,6 +302,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               (for all J in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
                    (if I /= J then Element (Model (Id_List), I) /= Element (Model (Id_List), J))));
 
+         pragma Loop_Invariant (State.Cycle_Id = 0);
       end loop;
 
       State.Path := Id_List;
@@ -315,6 +318,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Config : Waypoint_Plan_Manager_Configuration_Data;
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
    is
+      -- TODO: Logic for this subprogram needs to be updated, since I changed
+      -- Prefix and Cycle to Path and Cycle_ID. A quick fix to get everything to
+      -- compile was to set Prefix and Cycle to State.Path, but the logic is
+      -- now fundamentally wrong.
       Id : constant Pos64 := State.Next_Segment_Id;
       First_Id : constant Pos64 := State.Next_First_Id;
       Prefix : constant Pos64_Vector := State.Path;
