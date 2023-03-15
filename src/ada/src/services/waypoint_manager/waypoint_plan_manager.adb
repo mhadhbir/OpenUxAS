@@ -6,13 +6,16 @@ with Ada.Text_IO;                use Ada.Text_IO;
 
 package body Waypoint_Plan_Manager with SPARK_Mode is
 
-   use all type Pos64_WP_Map;
+   -- Pos64_WP_Maps.Formal_Model.M.Map
+   -- Pos64_Nat64_Maps.Formal_Model.M.Map
+
+   --  use all type Pos64_WP_Map;
    use all type Pos64_WP_Maps.Formal_Model.M.Map;
-   use Pos64_WP_Maps.Formal_Model;
-   use all type Pos64_Nat64_Map;
+   --  use Pos64_WP_Maps.Formal_Model;
+   --  use all type Pos64_Nat64_Map;
    use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
-   use Pos64_Nat64_Maps.Formal_Model;
-   use Pos64_Vectors.Formal_Model;
+   --  use Pos64_Nat64_Maps.Formal_Model;
+   --  use Pos64_Vectors.Formal_Model;
 
    --  function Same_Mappings
    --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
@@ -153,6 +156,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64 renames Element;
 
       use Pos64_Vectors.Formal_Model.M;
+      use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
       Clear (State.Id_To_Waypoint);
@@ -187,6 +191,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       -- Append First_Id to the list
       Append (Id_List, First_Id);
+
+      -- Assert properties needed for container min and max size
       pragma Assert (not Is_Empty (Id_List));
       pragma Assert (Length (Id_List) <= 2);
 
@@ -202,16 +208,16 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
         (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
 
       pragma Assert
-        (for all I in First_Index (Id_List) .. Last_Index (Id_List) =>
-             (for all J in First_Index (Id_List) .. Last_Index (Id_List) =>
-                    (if I /= J then Element (Id_List, I) /= Element (Id_List, J))));
+        (for all I in Pos_Vec_M.First .. Last (Model (Id_List)) =>
+             (for all J in Pos_Vec_M.First .. Last (Model (Id_List)) =>
+                    (if I /= J then Element (Model (Id_List), I) /= Element (Model (Id_List), J))));
 
       -- This following is true and proves as an assert, but it's slow.
       -- I'm going to make it an Assume for now to speed things up.
       pragma Assert
         (for all Id of Model (State.Id_To_Waypoint) =>
            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-           Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
+           Element (Model (State.Id_To_Waypoint), Id)));
 
       -- pragma Assert (Contains (Ids, Last_Element (Id_List)));
 
@@ -221,27 +227,31 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            or else Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = Last_Element (Id_List)
          then
             -- Candidate successor is 0 or points to itself.
-            -- Return the path with no cycle.
+            -- There is no cycle. Set the path and return.
             State.Path := Id_List;
             return;
          elsif not Contains (State.Id_To_Next_Id,
                              Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
          then
-            -- Candidate successor can't be found
+            -- Candidate successor can't be found.
+            -- There is no cycle. Set the path and return.
             State.Path := Id_List;
             return;
          elsif Contains (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)))
          then
-            -- There is a cycle in the list.
+            -- There is a cycle.
+            -- Set the cycle id and path and return.
             State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
             State.Path := Id_List;
             return;
          elsif Contains (State.Id_To_Next_Id, Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
          then
             -- Found a successor that's not a cycle.
+            -- Append it to the list and continue.
             declare
                Current_Id : constant Pos64 := Last_Element (Id_List);
-               Succ : constant Pos64 := Successor (State.Id_To_Next_Id, Last_Element (Id_List)) with Ghost;
+               Succ : constant Pos64 :=
+                 Successor (State.Id_To_Next_Id, Last_Element (Id_List)) with Ghost;
             begin
 
                Id_List_Tmp := Id_List;
@@ -258,23 +268,27 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                  (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
             end;
          else
+            -- Should be unreachable.
+            -- Making all previous cases explicit seems to aid proof.
             raise Program_Error;
          end if;
 
          pragma Loop_Invariant (not Is_Empty (Id_List));
          pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
+
+         pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
+         pragma Loop_Invariant (State.Id_To_Waypoint = State.Id_To_Waypoint'Loop_Entry);
+
          pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
                                 Element (Model (Id_List), 2) = First_Id);
-         pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
-         pragma Loop_Invariant (State.Id_To_Waypoint = State'Loop_Entry.Id_To_Waypoint);
-
-         --  pragma Loop_Invariant
-         --    (for all Id of Model (State.Id_To_Waypoint) =>
-         --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
-         --       Element (State.Id_To_Waypoint, Find (State.Id_To_Waypoint, Id))));
 
          pragma Loop_Invariant
-           (for all E of Model (Id_List) => Contains (State.Id_To_Next_Id, E));
+           (for all Id of Model (State.Id_To_Waypoint) =>
+            Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
+              Element (Model (State.Id_To_Waypoint), Id)));
+
+         pragma Loop_Invariant
+           (for all Id of Model (Id_List) => Contains (State.Id_To_Next_Id, Id));
 
          pragma Loop_Invariant
            (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
@@ -282,9 +296,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                                               Element (Id_List, I + 1));
 
          pragma Loop_Invariant
-           (for all I in First_Index (Id_List) .. Last_Index (Id_List) =>
-                (for all J in First_Index (Id_List) .. Last_Index (Id_List) =>
-                   (if I /= J then Element (Id_List, I) /= Element (Id_List, J))));
+           (for all I in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
+              (for all J in Pos64_Vectors.Formal_Model.M.First .. Last (Model (Id_List)) =>
+                   (if I /= J then Element (Model (Id_List), I) /= Element (Model (Id_List), J))));
 
       end loop;
 
