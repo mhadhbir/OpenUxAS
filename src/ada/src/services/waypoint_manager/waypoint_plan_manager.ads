@@ -134,6 +134,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
                       Element (Model (State.Id_To_Waypoint), Id))) and then
+         -- Basic Id_To_Waypoint and Id_To_Next_Id should have the same keys,
+         -- and the values stored in Id_To_Next_Id should match the NextWaypoint
+         -- Id value for the corresponding Waypoint stored in Id_To_Waypoint
+         (for all Id of Model (State.Id_To_Waypoint) =>
+            Contains (Model (State.Id_To_Next_Id), Id)) and then
+         (for all Id of Model (State.Id_To_Next_Id) =>
+           Contains (Model (State.Id_To_Waypoint), Id)) and then
+         (for all Id of Model (State.Id_To_Next_Id) =>
+            Element (Model (State.Id_To_Next_Id), Id) =
+              Element (Model (State.Id_To_Waypoint), Id).NextWaypoint) and then
          -- If MC.FirstWaypoint cannot be found in Id_To_Next_Id,
          -- then path, cycle, and "next" segment info should be 0/empty.
          -- Otherwise, MC.FirstWaypoint should be element 1 or 2 of Path.
