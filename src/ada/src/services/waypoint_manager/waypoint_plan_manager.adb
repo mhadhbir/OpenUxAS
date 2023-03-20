@@ -176,8 +176,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       if not Contains (State.Id_To_Next_Id, First_Id) then
          State.Next_Segment_Id := 0;
          State.Next_First_Id := 0;
-
-         pragma Assert (State.Cycle_Id = 0 and Is_Empty (State.Path));
+         pragma Assert (if State.Cycle_Id = 0 then Is_Empty (State.Path));
          return;
       end if;
 
@@ -199,6 +198,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       -- Assert properties needed for container min and max size
       pragma Assert (not Is_Empty (Id_List));
       pragma Assert (Length (Id_List) <= 2);
+
+      pragma Assert (if State.Cycle_Id = 0 then Is_Empty (State.Path));
 
       pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
                        (Element (Model (Id_List), 1) = First_Id or else
@@ -318,53 +319,107 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Config : Waypoint_Plan_Manager_Configuration_Data;
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
    is
-      -- TODO: Logic for this subprogram needs to be updated, since I changed
-      -- Prefix and Cycle to Path and Cycle_ID. A quick fix to get everything to
-      -- compile was to set Prefix and Cycle to State.Path, but the logic is
-      -- now fundamentally wrong.
       Id : constant Pos64 := State.Next_Segment_Id;
       First_Id : constant Pos64 := State.Next_First_Id;
-      Prefix : constant Pos64_Vector := State.Path;
-      Cycle : constant Pos64_Vector := State.Path;
       Len : constant Positive := Positive (Config.NumberWaypointsToServe);
       Overlap : constant Positive := Positive (Config.NumberWaypointsOverlap);
 
-      I : Natural := 1;
       C : Pos64_Vectors.Extended_Index;
-      In_Prefix : Boolean;
+
+      use Pos64_Vectors.Formal_Model;
+      use Pos64_Vectors.Formal_Model.M;
+      use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
-      State.New_Command := False;
-      State.Next_Segment_Id := 0;
-      State.Next_First_Id := 0;
-      Clear (State.Segment);
-
-      C := Find_Index (Prefix, Id);
-      In_Prefix := (if C /= Pos64_Vectors.No_Index then True else False);
-
-      while C in First_Index (Prefix) .. Last_Index (Prefix) and then I <= Len loop
-         pragma Loop_Invariant (Natural (Length (State.Segment)) < I);
-         Append (State.Segment, Element (Prefix, C));
-         C := Iter_Next (Prefix, C);
-         I := I + 1;
-      end loop;
-
-      C := (if In_Prefix then First_Index (Cycle) else Find_Index (Cycle, Id));
-
-      while C in First_Index (Cycle) .. Last_Index (Cycle) and then I <= Len loop
-         pragma Loop_Invariant (Natural (Length (State.Segment)) < I);
-         Append (State.Segment, Element (Cycle, C));
-         C := Iter_Next (Cycle, C);
-         if not Iter_Has_Element (Cycle, C) then
-            C := First_Index (Cycle);
+      if State.New_Command then
+         Append (State.Segment, Id);
+         if Id /= First_Id then
+            Append (State.Segment, First_Id);
+            -- If we want a successor property, then we'll need that
+            -- these two are successors in the precondition
          end if;
-         I := I + 1;
-      end loop;
+      else
+         declare
+            Segment_Tmp : constant Pos64_Vector := State.Segment;
+         begin
+            Clear (State.Segment);
+            for I in 0 .. Overlap - 1 loop
+               Append (State.Segment,
+                       Element (Segment_Tmp, Last_Index (Segment_Tmp) - Overlap + 1 + I));
+               pragma Loop_Invariant (Integer (Length (State.Segment)) = I + 1);
+               pragma Loop_Invariant (Element (State.Segment, 1) = Id);
+               pragma Loop_Invariant (if I > 0 then Element (State.Segment, 2) = First_Id);
+               pragma Loop_Invariant
+                 (for all Id of Model (State.Segment) =>
+                    Pos_Vec_M.Contains (Model (State.Path), Pos_Vec_M.First, Last (Model (State.Path)), Id));
+            end loop;
+         end;
+      end if;
 
-      if Integer (Length (State.Segment)) > Overlap then
+      pragma Assert
+        (if State.New_Command and Id = First_Id
+         then
+           (Element (State.Segment, 1) = Id and
+                Element (State.Segment, 1) = First_Id)
+         else
+           (Element (State.Segment, 1) = Id and
+                Element (State.Segment, 2) = First_Id));
+
+      pragma Assert
+        (for all Id of Model (State.Segment) =>
+             Pos_Vec_M.Contains (Model (State.Path),
+                                 Pos_Vec_M.First,
+                                 Last (Model (State.Path)),
+                                 Id));
+
+      C := Find_Index (State.Path, Last_Element (State.Segment));
+      pragma Assert (C /= Pos64_Vectors.No_Index);
+      C := Iter_Next (State.Path, C);
+
+      if State.Cycle_Id > 0 then
+         while Integer (Length (State.Segment)) < Len loop
+            if not Iter_Has_Element (State.Path, C) then
+               C := Find_Index (State.Path, State.Cycle_Id);
+               pragma Assert (C /= Pos64_Vectors.No_Index);
+            end if;
+            Append (State.Segment, Element (State.Path, C));
+            C := Iter_Next (State.Path, C);
+            pragma Loop_Invariant
+              (if State.New_Command and Id = First_Id
+               then
+                 (Element (State.Segment, 1) = Id and
+                      Element (State.Segment, 1) = First_Id)
+               else
+                 (Element (State.Segment, 1) = Id and
+                      Element (State.Segment, 2) = First_Id));
+         end loop;
+      else
+         while Iter_Has_Element (State.Path, C) and then
+           Integer (Length (State.Segment)) < Len
+         loop
+            Append (State.Segment, Element (State.Path, C));
+            C := Iter_Next (State.Path, C);
+            pragma Loop_Invariant
+              (if State.New_Command and Id = First_Id
+               then
+                 (Element (State.Segment, 1) = Id and
+                      Element (State.Segment, 1) = First_Id)
+               else
+                 (Element (State.Segment, 1) = Id and
+                      Element (State.Segment, 2) = First_Id));
+         end loop;
+      end if;
+
+      if State.Cycle_Id > 0 or else Positive (Length (State.Segment)) = Len
+      then
          State.Next_Segment_Id := Element (State.Segment, Last_Index (State.Segment) - Overlap + 1);
          State.Next_First_Id := Element (State.Segment, Last_Index (State.Segment) - Overlap + 2);
+      else
+         State.Next_Segment_Id := 0;
+         State.Next_First_Id := 0;
       end if;
+
+      State.New_Command := False;
 
       declare
          MC_Out : MissionCommand := State.MC;
