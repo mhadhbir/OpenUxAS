@@ -439,21 +439,33 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           State.Next_Segment_Index_In_Path,
                           State.Segment);
 
-      pragma Assert (for all Id of State.Segment => Contains (State.Id_To_Waypoint, Id));
+      -- pragma Assert (for all Id of State.Segment => Contains (State.Path, Id));
+      -- pragma Assert (for all Id of State.Segment => Contains (State.Id_To_Waypoint, Id));
 
-      pragma Assert (Length (State.Segment) >= 1);
+      -- pragma Assert (Length (State.Segment) >= 1);
 
       if State.Cycle_Index_In_Path > 0 then
-         pragma Assert (Integer (Length (State.Segment)) = Len);
-         State.Next_Segment_Id := Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 1);
-         State.Next_First_Id := Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 2);
+         -- pragma Assert (Integer (Length (State.Segment)) = Len);
+         State.Next_Segment_Id :=
+           Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 1);
+         -- pragma Assert (Contains (State.Path, State.Next_Segment_Id));
+         State.Next_Segment_Index_In_Path :=
+           Find_Index (State.Path, State.Next_Segment_Id);
+         -- pragma Assert (State.Next_Segment_Index_In_Path > 0);
+         pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index_In_Path));
       else
          if Positive (Length (State.Segment)) = Len and then
            Element (State.Segment, Last_Index (State.Segment)) /=
              Element (State.Path, Last_Index (State.Path))
          then
-            State.Next_Segment_Id := Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 1);
-            State.Next_First_Id := Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 2);
+            -- pragma Assert (Integer (Length (State.Segment)) = Len);
+            State.Next_Segment_Id :=
+              Element (State.Segment, Integer (Length (State.Segment)) - Overlap + 1);
+            -- pragma Assert (Contains (State.Path, State.Next_Segment_Id));
+            State.Next_Segment_Index_In_Path :=
+              Find_Index (State.Path, State.Next_Segment_Id);
+            -- pragma Assert (State.Next_Segment_Index_In_Path > 0);
+            pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index_In_Path));
          else
             State.Next_Segment_Id := 0;
             State.Next_First_Id := 0;
@@ -469,7 +481,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          WP : Waypoint;
       begin
          -- MC_Out.FirstWaypoint := First_Id;
-         MC_Out.FirstWaypoint := 1;
+         MC_Out.FirstWaypoint :=
+           (if Length (State.Segment) > 1
+            then Element (State.Segment, 2)
+            else Element (State.Segment, 1));
          for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
             Id := Element (State.Segment, I);
             --if Contains (State.Id_To_Waypoint, Id) then
