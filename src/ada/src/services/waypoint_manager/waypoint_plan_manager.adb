@@ -50,6 +50,15 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       null;
    end Lemma_List_Still_Linked_After_Append;
 
+   procedure Lemma_First_Element_Unchanged_After_Append
+     (V_Old, V_New : Pos64_Vectors.Vector;
+      First_Item : Pos64;
+      New_Item : Pos64)
+   is
+   begin
+      null;
+   end Lemma_First_Element_Unchanged_After_Append;
+
    function Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
@@ -315,106 +324,100 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    ---------------------
 
    procedure Initialize_Segment
-     (New_Command : Boolean;
-      Next_Id, First_Id : Pos64;
-      Overlap : Positive;
-      Path : Pos64_Vector;
-      Path_Index : out Positive;
+     (Path : Pos64_Vector;
+      Desired_Segment_Length : Positive;
+      Cycle_Index : Natural;
+      Path_Index : in out Positive;
       Segment : in out Pos64_Vector)
      with
        Pre =>
-         Overlap <= Positive (Max) - 1 and then
-         Overlap >= 2 and then
-         (if New_Command
-            then Is_Empty (Segment)
-              else (Natural (Length (Segment)) > Overlap and then
-                      Next_Id = Element (Segment, Last_Index (Segment) -
-                              Overlap + 1) and then
-                        First_Id = Element (Segment, Last_Index (Segment) -
-                                              Overlap + 2) and then
-                      (for all Id of Model (Segment) =>
-                         Pos_Vec_M.Contains (Model (Path),
-                                             Pos_Vec_M.First,
-                                             Pos_Vec_M.Last (Model (Path)),
-                                             Id)))) and then
-         Pos_Vec_M.Contains (Model (Path),
-                             Pos_Vec_M.First,
-                             Pos_Vec_M.Last (Model (Path)),
-                             Next_Id) and then
-         Pos_Vec_M.Contains (Model (Path),
-                             Pos_Vec_M.First,
-                             Pos_Vec_M.Last (Model (Path)),
-                             First_Id),
+         Is_Empty (Segment) and then
+         Length (Path) > 0 and then
+         Iter_Has_Element (Path, Path_Index) and then
+         (if Cycle_Index > 0 then Iter_Has_Element (Path, Cycle_Index)) and then
+         Desired_Segment_Length < Positive (Max),
        Post =>
-         (if New_Command and Next_Id = First_Id
-            then
-              (Element (Model (Segment), 1) = Next_Id and
-                 Element (Model (Segment), 1) = First_Id)
-            else
-              (Element (Model (Segment), 1) = Next_Id and
-                 Element (Model (Segment), 2) = First_Id)) and then
-         (for all Id of Model (Segment) =>
-             Pos_Vec_M.Contains (Model (Path),
-                                 Pos_Vec_M.First,
-                                 Pos_Vec_M.Last (Model (Path)),
-                                 Id)) and then
-         Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
-           Element (Model (Path), Path_Index) and then
-         Iter_Has_Element (Path, Path_Index);
+         Element (Segment, 1) = Element (Path, Path_Index'Old) and then
+         (if Cycle_Index > 0
+          then Positive (Length (Segment)) = Desired_Segment_Length) and then
+         (if Cycle_Index = 0
+          then
+            (if Positive (Length (Path)) - Path_Index'Old + 1 >= Desired_Segment_Length
+             then Positive (Length (Segment)) = Desired_Segment_Length
+             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index'Old + 1));
 
    procedure Initialize_Segment
-     (New_Command : Boolean;
-      Next_Id, First_Id : Pos64;
-      Overlap : Positive;
-      Path : Pos64_Vector;
-      Path_Index : out Positive;
+     (Path : Pos64_Vector;
+      Desired_Segment_Length : Positive;
+      Cycle_Index : Natural;
+      Path_Index : in out Positive;
       Segment : in out Pos64_Vector)
    is
+      Len : Positive;
+      Initial_Path_Index : constant Positive := Path_Index with Ghost;
+      Segment_Tmp : Pos64_Vector with Ghost;
+
       use Pos64_Vectors.Formal_Model;
       use Pos64_Vectors.Formal_Model.M;
    begin
-      if New_Command then
-         Append (Segment, Next_Id);
-         if Next_Id /= First_Id then
-            Append (Segment, First_Id);
-            Path_Index := Find_Index (Path, First_Id);
+
+      if Cycle_Index > 0 then
+         Len := Desired_Segment_Length;
+         for I in 1 .. Len loop
+            if not Iter_Has_Element (Path, Path_Index) then
+               Path_Index := Cycle_Index;
+            end if;
+            Append (Segment, Element (Path, Path_Index));
+            Path_Index := Path_Index + 1;
+            pragma Loop_Invariant (Element (Model (Segment), 1) =
+                                     Element (Model (Path), Initial_Path_Index));
+            pragma Loop_Invariant (Integer (Length (Segment)) = I);
+         end loop;
+      elsif Cycle_Index = 0 then
+
+         pragma Assert (Path_Index = Initial_Path_Index);
+
+         if Integer (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
+         then
+            Len := Desired_Segment_Length;
+            pragma Assert (Len >= 1);
+            for I in 1 .. Len loop
+               Append (Segment, Element (Path, Path_Index));
+               Path_Index := Path_Index + 1;
+               pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
+               pragma Loop_Invariant (Integer (Length (Segment)) = I);
+               pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
+            end loop;
+            pragma Assert (Positive (Length (Segment)) = Len);
             pragma Assert
-              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
-                 Element (Model (Path), Path_Index));
-            pragma Assert (Iter_Has_Element (Path, Path_Index));
+              (Positive (Length (Segment)) = Desired_Segment_Length);
          else
-            Path_Index := Find_Index (Path, Next_Id);
+            Len := Integer (Length (Path)) - Path_Index + 1;
+            pragma Assert (Len >= 1);
+            for I in 1 .. Len loop
+               Append (Segment, Element (Path, Path_Index));
+               Path_Index := Path_Index + 1;
+               pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
+               pragma Loop_Invariant (Integer (Length (Segment)) = I);
+               pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
+            end loop;
+            pragma Assert (Positive (Length (Segment)) = Len);
             pragma Assert
-              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
-                 Element (Model (Path), Path_Index));
-            pragma Assert (Iter_Has_Element (Path, Path_Index));
+              (Positive (Length (Segment)) =
+                 Positive (Length (Path)) - Initial_Path_Index + 1);
          end if;
       else
-         declare
-            Segment_Tmp : constant Pos64_Vector := Segment;
-         begin
-            Clear (Segment);
-            for I in 0 .. Overlap - 1 loop
-               Append (Segment,
-                       Element (Segment_Tmp, Last_Index (Segment_Tmp) - Overlap + 1 + I));
-               pragma Loop_Invariant (Integer (Length (Model (Segment))) = I + 1);
-               pragma Loop_Invariant (Element (Model (Segment), 1) = Next_Id);
-               pragma Loop_Invariant (if I > 0 then Element (Model (Segment), 2) = First_Id);
-               pragma Loop_Invariant
-                 (for all Id of Model (Segment) =>
-                    Contains (Model (Path), Pos_Vec_M.First, Last (Model (Path)), Id));
-            end loop;
-            Path_Index := Find_Index (Path, Last_Element (Segment));
-            pragma Assert
-              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
-                 Element (Model (Path), Path_Index));
-            pragma Assert (Iter_Has_Element (Path, Path_Index));
-         end;
-         pragma Assert
-              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
-                 Element (Model (Path), Path_Index));
-         pragma Assert (Iter_Has_Element (Path, Path_Index));
+         raise Program_Error;
       end if;
+
+      --  pragma Assert
+      --    (if Cycle_Index > 0
+      --     then Positive (Length (Segment)) = Desired_Segment_Length
+      --     else
+      --       (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
+      --        then Positive (Length (Segment)) = Desired_Segment_Length
+      --        else Positive (Length (Segment)) = Positive (Length (Path)) - Initial_Path_Index + 1));
+
    end Initialize_Segment;
 
    procedure Produce_Segment
@@ -426,7 +429,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       First_Id : constant Pos64 := State.Next_First_Id;
       Len : constant Positive := Positive (Config.NumberWaypointsToServe);
       Overlap : constant Positive := Positive (Config.NumberWaypointsOverlap);
-      Path_Index : Positive;
+      Path_Index : Positive := Positive (State.Next_Segment_Index_In_Path);
 
       C : Pos64_Vectors.Extended_Index;
 
@@ -435,7 +438,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
-      Initialize_Segment (State.New_Command, Next_Id, First_Id, Overlap, State.Path, Path_Index, State.Segment);
+      Initialize_Segment (State.Path,
+                          Integer (Config.NumberWaypointsToServe),
+                          State.Cycle_Index_In_Path,
+                          State.Next_Segment_Index_In_Path,
+                          State.Segment);
 
       C := Iter_Next (State.Path, Path_Index);
 
