@@ -264,11 +264,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
                Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
 
-               Lemma_Map_Still_Contains_List_After_Append
-                 (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
-
-               Lemma_List_Still_Linked_After_Append
-                 (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
+               --  Lemma_Map_Still_Contains_List_After_Append
+               --    (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
+               --
+               --  Lemma_List_Still_Linked_After_Append
+               --    (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
             end;
          else
             -- Should be unreachable.
@@ -314,15 +314,119 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    -- Produce_Segment --
    ---------------------
 
+   procedure Initialize_Segment
+     (New_Command : Boolean;
+      Next_Id, First_Id : Pos64;
+      Overlap : Positive;
+      Path : Pos64_Vector;
+      Path_Index : out Positive;
+      Segment : in out Pos64_Vector)
+     with
+       Pre =>
+         Overlap <= Positive (Max) - 1 and then
+         Overlap >= 2 and then
+         (if New_Command
+            then Is_Empty (Segment)
+              else (Natural (Length (Segment)) > Overlap and then
+                      Next_Id = Element (Segment, Last_Index (Segment) -
+                              Overlap + 1) and then
+                        First_Id = Element (Segment, Last_Index (Segment) -
+                                              Overlap + 2) and then
+                      (for all Id of Model (Segment) =>
+                         Pos_Vec_M.Contains (Model (Path),
+                                             Pos_Vec_M.First,
+                                             Pos_Vec_M.Last (Model (Path)),
+                                             Id)))) and then
+         Pos_Vec_M.Contains (Model (Path),
+                             Pos_Vec_M.First,
+                             Pos_Vec_M.Last (Model (Path)),
+                             Next_Id) and then
+         Pos_Vec_M.Contains (Model (Path),
+                             Pos_Vec_M.First,
+                             Pos_Vec_M.Last (Model (Path)),
+                             First_Id),
+       Post =>
+         (if New_Command and Next_Id = First_Id
+            then
+              (Element (Model (Segment), 1) = Next_Id and
+                 Element (Model (Segment), 1) = First_Id)
+            else
+              (Element (Model (Segment), 1) = Next_Id and
+                 Element (Model (Segment), 2) = First_Id)) and then
+         (for all Id of Model (Segment) =>
+             Pos_Vec_M.Contains (Model (Path),
+                                 Pos_Vec_M.First,
+                                 Pos_Vec_M.Last (Model (Path)),
+                                 Id)) and then
+         Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
+           Element (Model (Path), Path_Index) and then
+         Iter_Has_Element (Path, Path_Index);
+
+   procedure Initialize_Segment
+     (New_Command : Boolean;
+      Next_Id, First_Id : Pos64;
+      Overlap : Positive;
+      Path : Pos64_Vector;
+      Path_Index : out Positive;
+      Segment : in out Pos64_Vector)
+   is
+      use Pos64_Vectors.Formal_Model;
+      use Pos64_Vectors.Formal_Model.M;
+   begin
+      if New_Command then
+         Append (Segment, Next_Id);
+         if Next_Id /= First_Id then
+            Append (Segment, First_Id);
+            Path_Index := Find_Index (Path, First_Id);
+            pragma Assert
+              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
+                 Element (Model (Path), Path_Index));
+            pragma Assert (Iter_Has_Element (Path, Path_Index));
+         else
+            Path_Index := Find_Index (Path, Next_Id);
+            pragma Assert
+              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
+                 Element (Model (Path), Path_Index));
+            pragma Assert (Iter_Has_Element (Path, Path_Index));
+         end if;
+      else
+         declare
+            Segment_Tmp : constant Pos64_Vector := Segment;
+         begin
+            Clear (Segment);
+            for I in 0 .. Overlap - 1 loop
+               Append (Segment,
+                       Element (Segment_Tmp, Last_Index (Segment_Tmp) - Overlap + 1 + I));
+               pragma Loop_Invariant (Integer (Length (Model (Segment))) = I + 1);
+               pragma Loop_Invariant (Element (Model (Segment), 1) = Next_Id);
+               pragma Loop_Invariant (if I > 0 then Element (Model (Segment), 2) = First_Id);
+               pragma Loop_Invariant
+                 (for all Id of Model (Segment) =>
+                    Contains (Model (Path), Pos_Vec_M.First, Last (Model (Path)), Id));
+            end loop;
+            Path_Index := Find_Index (Path, Last_Element (Segment));
+            pragma Assert
+              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
+                 Element (Model (Path), Path_Index));
+            pragma Assert (Iter_Has_Element (Path, Path_Index));
+         end;
+         pragma Assert
+              (Element (Model (Segment), Pos_Vec_M.Last (Model (Segment))) =
+                 Element (Model (Path), Path_Index));
+         pragma Assert (Iter_Has_Element (Path, Path_Index));
+      end if;
+   end Initialize_Segment;
+
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
       Config : Waypoint_Plan_Manager_Configuration_Data;
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
    is
-      Id : constant Pos64 := State.Next_Segment_Id;
+      Next_Id : constant Pos64 := State.Next_Segment_Id;
       First_Id : constant Pos64 := State.Next_First_Id;
       Len : constant Positive := Positive (Config.NumberWaypointsToServe);
       Overlap : constant Positive := Positive (Config.NumberWaypointsOverlap);
+      Path_Index : Positive;
 
       C : Pos64_Vectors.Extended_Index;
 
@@ -331,50 +435,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
-      if State.New_Command then
-         Append (State.Segment, Id);
-         if Id /= First_Id then
-            Append (State.Segment, First_Id);
-            -- If we want a successor property, then we'll need that
-            -- these two are successors in the precondition
-         end if;
-      else
-         declare
-            Segment_Tmp : constant Pos64_Vector := State.Segment;
-         begin
-            Clear (State.Segment);
-            for I in 0 .. Overlap - 1 loop
-               Append (State.Segment,
-                       Element (Segment_Tmp, Last_Index (Segment_Tmp) - Overlap + 1 + I));
-               pragma Loop_Invariant (Integer (Length (State.Segment)) = I + 1);
-               pragma Loop_Invariant (Element (State.Segment, 1) = Id);
-               pragma Loop_Invariant (if I > 0 then Element (State.Segment, 2) = First_Id);
-               pragma Loop_Invariant
-                 (for all Id of Model (State.Segment) =>
-                    Pos_Vec_M.Contains (Model (State.Path), Pos_Vec_M.First, Last (Model (State.Path)), Id));
-            end loop;
-         end;
-      end if;
+      Initialize_Segment (State.New_Command, Next_Id, First_Id, Overlap, State.Path, Path_Index, State.Segment);
 
-      pragma Assert
-        (if State.New_Command and Id = First_Id
-         then
-           (Element (State.Segment, 1) = Id and
-                Element (State.Segment, 1) = First_Id)
-         else
-           (Element (State.Segment, 1) = Id and
-                Element (State.Segment, 2) = First_Id));
-
-      pragma Assert
-        (for all Id of Model (State.Segment) =>
-             Pos_Vec_M.Contains (Model (State.Path),
-                                 Pos_Vec_M.First,
-                                 Last (Model (State.Path)),
-                                 Id));
-
-      C := Find_Index (State.Path, Last_Element (State.Segment));
-      pragma Assert (C /= Pos64_Vectors.No_Index);
-      C := Iter_Next (State.Path, C);
+      C := Iter_Next (State.Path, Path_Index);
 
       if State.Cycle_Id > 0 then
          while Integer (Length (State.Segment)) < Len loop
@@ -385,13 +448,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             Append (State.Segment, Element (State.Path, C));
             C := Iter_Next (State.Path, C);
             pragma Loop_Invariant
-              (if State.New_Command and Id = First_Id
+              (if State.New_Command and Next_Id = First_Id
                then
-                 (Element (State.Segment, 1) = Id and
-                      Element (State.Segment, 1) = First_Id)
+                 (Element (Model (State.Segment), 1) = Next_Id and
+                      Element (Model (State.Segment), 1) = First_Id)
                else
-                 (Element (State.Segment, 1) = Id and
-                      Element (State.Segment, 2) = First_Id));
+                 (Element (Model (State.Segment), 1) = Next_Id and
+                      Element (Model (State.Segment), 2) = First_Id));
          end loop;
       else
          while Iter_Has_Element (State.Path, C) and then
@@ -400,13 +463,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             Append (State.Segment, Element (State.Path, C));
             C := Iter_Next (State.Path, C);
             pragma Loop_Invariant
-              (if State.New_Command and Id = First_Id
+              (if State.New_Command and Next_Id = First_Id
                then
-                 (Element (State.Segment, 1) = Id and
-                      Element (State.Segment, 1) = First_Id)
+                 (Element (Model (State.Segment), 1) = Next_Id and
+                      Element (Model (State.Segment), 1) = First_Id)
                else
-                 (Element (State.Segment, 1) = Id and
-                      Element (State.Segment, 2) = First_Id));
+                 (Element (Model (State.Segment), 1) = Next_Id and
+                      Element (Model (State.Segment), 2) = First_Id));
          end loop;
       end if;
 
@@ -421,32 +484,32 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       State.New_Command := False;
 
-      declare
-         MC_Out : MissionCommand := State.MC;
-         WP_List : WP_Seq;
-         Id : Pos64;
-         WP : Waypoint;
-      begin
-         MC_Out.FirstWaypoint := First_Id;
-         for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
-            Id := Element (State.Segment, I);
-            if Contains (State.Id_To_Waypoint, Id) then
-               WP := Element (State.Id_To_Waypoint, Id);
-               if I = Last_Index (State.Segment) then
-                  WP.NextWaypoint := WP.Number;
-                  -- TODO: Extend SPARK messages to handle
-                  -- VehicleAction -> NavigationAction -> LoiterAction
-                  -- VehicleAction -> PayloadAction -> GimbalAngleAction
-               end if;
-               -- WP.TurnType := Config.TurnType;
-               WP_List := Add (WP_List, WP);
-            end if;
-            pragma Loop_Invariant
-              (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
-         end loop;
-         MC_Out.WaypointList := WP_List;
-         sendBroadcastMessage (Mailbox, MC_Out);
-      end;
+      --  declare
+      --     MC_Out : MissionCommand := State.MC;
+      --     WP_List : WP_Seq;
+      --     Id : Pos64;
+      --     WP : Waypoint;
+      --  begin
+      --     MC_Out.FirstWaypoint := First_Id;
+      --     for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
+      --        Id := Element (State.Segment, I);
+      --        if Contains (State.Id_To_Waypoint, Id) then
+      --           WP := Element (State.Id_To_Waypoint, Id);
+      --           if I = Last_Index (State.Segment) then
+      --              WP.NextWaypoint := WP.Number;
+      --              -- TODO: Extend SPARK messages to handle
+      --              -- VehicleAction -> NavigationAction -> LoiterAction
+      --              -- VehicleAction -> PayloadAction -> GimbalAngleAction
+      --           end if;
+      --           -- WP.TurnType := Config.TurnType;
+      --           WP_List := Add (WP_List, WP);
+      --        end if;
+      --        pragma Loop_Invariant
+      --          (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
+      --     end loop;
+      --     MC_Out.WaypointList := WP_List;
+      --     sendBroadcastMessage (Mailbox, MC_Out);
+      --  end;
 
    end Produce_Segment;
 

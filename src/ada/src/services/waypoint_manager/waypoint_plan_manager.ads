@@ -1,6 +1,7 @@
-with Ada.Containers.Formal_Hashed_Maps;
-with Ada.Containers.Formal_Vectors;
-with Ada.Containers.Functional_Maps;
+with SPARK.Containers.Formal.Hashed_Maps;
+with SPARK.Containers.Formal.Vectors;
+with SPARK.Containers.Functional.Maps;
+
 with Ada.Containers;                             use all type Ada.Containers.Count_Type;
 with Waypoint_Plan_Manager_Communication;        use Waypoint_Plan_Manager_Communication;
 with Common;                                     use Common;
@@ -17,25 +18,25 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    function Pos64_Hash (X : Pos64) return Ada.Containers.Hash_Type is
      (Ada.Containers.Hash_Type'Mod (X));
 
-   package Pos64_WP_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
+   package Pos64_WP_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
    use Pos64_WP_Maps;
    package Pos_WP_Maps_P renames Pos64_WP_Maps.Formal_Model.P;
    package Pos_WP_Maps_K renames Pos64_WP_Maps.Formal_Model.K;
-   package Pos_WP_Maps_M is new Ada.Containers.Functional_Maps (Pos64, Waypoint);
+   package Pos_WP_Maps_M is new SPARK.Containers.Functional.Maps (Pos64, Waypoint);
    subtype Pos64_WP_Map is Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
      with Predicate =>
               (for all Id of Pos64_WP_Map =>
                  (Element (Pos64_WP_Map, Id).Number = Id and
                       Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
 
-   package Pos64_Nat64_Maps is new Ada.Containers.Formal_Hashed_Maps (Pos64, Nat64, Pos64_Hash);
+   package Pos64_Nat64_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
    package Pos_Nat_Maps_P renames Pos64_Nat64_Maps.Formal_Model.P;
    package Pos_Nat_Maps_K renames Pos64_Nat64_Maps.Formal_Model.K;
-   package Pos_Nat_Maps_M is new Ada.Containers.Functional_Maps (Pos64, Nat64);
+   package Pos_Nat_Maps_M is new SPARK.Containers.Functional.Maps (Pos64, Nat64);
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
-   package Pos64_Vectors is new Ada.Containers.Formal_Vectors (Positive, Pos64);
+   package Pos64_Vectors is new SPARK.Containers.Formal.Vectors (Positive, Pos64);
    subtype Pos64_Vector is Pos64_Vectors.Vector (Max + 1);
    package Pos_Vec_M renames Pos64_Vectors.Formal_Model.M;
    use Pos64_Vectors;
@@ -121,6 +122,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       New_Command : Boolean; -- Whether the most recent MissionCommand has yet -- been used to produce a segment
       Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached
                                              -- FirstWaypoint of next segment
+      Next_Segment_Index : Natural;
    end record;
 
    procedure Handle_MissionCommand
@@ -220,7 +222,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                                      State.Cycle_Id)) and then
          (if State.New_Command
             then (Is_Empty (State.Segment))
-              else (Length (State.Segment) >= Ada.Containers.Count_Type (Config.NumberWaypointsOverlap) and then
+              else (Length (State.Segment) > Ada.Containers.Count_Type (Config.NumberWaypointsOverlap) and then
                       State.Next_Segment_Id =
                         Element (State.Segment,
                                  Last_Index (State.Segment) -
@@ -237,11 +239,11 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Post =>
            (if State'Old.New_Command and State'Old.Next_Segment_Id = State'Old.Next_First_Id
               then
-                (Element (State.Segment, 1) = State'Old.Next_Segment_Id and
-                 Element (State.Segment, 1) = State'Old.Next_First_Id)
+                (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
+                 Element (Model (State.Segment), 1) = State'Old.Next_First_Id)
               else
-                (Element (State.Segment, 1) = State'Old.Next_Segment_Id and
-                 Element (State.Segment, 2) = State'Old.Next_First_Id)) and then
+                (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
+                 Element (Model (State.Segment), 2) = State'Old.Next_First_Id)) and then
            (if State.Cycle_Id > 0 or else
               Common.UInt32 (Length (State.Segment)) = Config.NumberWaypointsToServe
             then
