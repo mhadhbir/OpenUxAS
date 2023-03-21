@@ -221,59 +221,62 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Config.NumberWaypointsOverlap <= UInt32 (Max) - 1 and then
          Config.NumberWaypointsToServe > Config.NumberWaypointsOverlap and then
          Config.NumberWaypointsToServe <= UInt32 (Max) and then
-         State.Next_Segment_Id > 0 and then
-         State.Next_First_Id > 0 and then
-         State.Next_Segment_Index_In_Path > 0 and then
-         Pos_Vec_M.Contains (Model (State.Path),
-                             Pos_Vec_M.First,
-                             Pos_Vec_M.Last (Model (State.Path)),
-                             State.Next_Segment_Id) and then
-         Pos_Vec_M.Contains (Model (State.Path),
-                             Pos_Vec_M.First,
-                             Pos_Vec_M.Last (Model (State.Path)),
-                             State.Next_First_Id) and then
-         (if State.Cycle_Id > 0
-            then Pos_Vec_M.Contains (Model (State.Path),
-                                     Pos_Vec_M.First,
-                                     Pos_Vec_M.Last (Model (State.Path)),
-                                     State.Cycle_Id)) and then
-         (if State.New_Command
-            then (Is_Empty (State.Segment))
-              else (Length (State.Segment) > Ada.Containers.Count_Type (Config.NumberWaypointsOverlap) and then
-                      State.Next_Segment_Id =
-                        Element (State.Segment,
-                                 Last_Index (State.Segment) -
-                                 Positive (Config.NumberWaypointsOverlap) + 1) and then
-                      State.Next_First_Id =
-                        Element (State.Segment,
-                                 Last_Index (State.Segment) -
-                                 Positive (Config.NumberWaypointsOverlap) + 2) and then
-                    (for all Id of Model (State.Segment) =>
-                         Pos_Vec_M.Contains (Model (State.Path),
-                                              Pos_Vec_M.First,
-                                              Pos_Vec_M.Last (Model (State.Path)),
-                                              Id)))), -- Need "successor property" too
-         Post =>
-           (if State'Old.New_Command and State'Old.Next_Segment_Id = State'Old.Next_First_Id
-              then
-                (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
-                 Element (Model (State.Segment), 1) = State'Old.Next_First_Id)
-              else
-                (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
-                 Element (Model (State.Segment), 2) = State'Old.Next_First_Id)) and then
-           (if State.Cycle_Id > 0 or else
-              Common.UInt32 (Length (State.Segment)) = Config.NumberWaypointsToServe
-            then
-              (State.Next_Segment_Id =
-                         Element (State'Old.Segment,
-                                  Last_Index (State'Old.Segment) -
-                                    Positive (Config.NumberWaypointsOverlap) + 1) and
-                 State.Next_First_Id =
-                   Element (State'Old.Segment,
-                            Last_Index (State'Old.Segment) -
-                              Positive (Config.NumberWaypointsOverlap) + 2))
-            else
-              (State.Next_Segment_Id = 0 and State.Next_First_Id = 0));
+         --  State.Next_Segment_Id > 0 and then
+         --  State.Next_First_Id > 0 and then
+         Iter_Has_Element (State.Path, State.Next_Segment_Index_In_Path) and then
+         (if State.Cycle_Index_In_Path > 0 then
+            Iter_Has_Element (State.Path, State.Cycle_Index_In_Path)) and then
+         (for all Id of State.Path => Contains (State.Id_To_Waypoint, Id)); -- and then
+         --  Pos_Vec_M.Contains (Model (State.Path),
+         --                      Pos_Vec_M.First,
+         --                      Pos_Vec_M.Last (Model (State.Path)),
+         --                      State.Next_Segment_Id) and then
+         --  Pos_Vec_M.Contains (Model (State.Path),
+         --                      Pos_Vec_M.First,
+         --                      Pos_Vec_M.Last (Model (State.Path)),
+         --                      State.Next_First_Id) and then
+         --  (if State.Cycle_Id > 0
+         --     then Pos_Vec_M.Contains (Model (State.Path),
+         --                              Pos_Vec_M.First,
+         --                              Pos_Vec_M.Last (Model (State.Path)),
+         --                              State.Cycle_Id)) and then
+         --  (if State.New_Command
+         --     then (Is_Empty (State.Segment))
+         --       else (Length (State.Segment) > Ada.Containers.Count_Type (Config.NumberWaypointsOverlap) and then
+         --               State.Next_Segment_Id =
+         --                 Element (State.Segment,
+         --                          Last_Index (State.Segment) -
+         --                          Positive (Config.NumberWaypointsOverlap) + 1) and then
+         --               State.Next_First_Id =
+         --                 Element (State.Segment,
+         --                          Last_Index (State.Segment) -
+         --                          Positive (Config.NumberWaypointsOverlap) + 2) and then
+         --             (for all Id of Model (State.Segment) =>
+         --                  Pos_Vec_M.Contains (Model (State.Path),
+         --                                       Pos_Vec_M.First,
+         --                                       Pos_Vec_M.Last (Model (State.Path)),
+         --                                       Id)))); -- Need "successor property" too
+         --  Post =>
+         --    (if State'Old.New_Command and State'Old.Next_Segment_Id = State'Old.Next_First_Id
+         --       then
+         --         (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
+         --          Element (Model (State.Segment), 1) = State'Old.Next_First_Id)
+         --       else
+         --         (Element (Model (State.Segment), 1) = State'Old.Next_Segment_Id and
+         --          Element (Model (State.Segment), 2) = State'Old.Next_First_Id)) and then
+         --    (if State.Cycle_Id > 0 or else
+         --       Common.UInt32 (Length (State.Segment)) = Config.NumberWaypointsToServe
+         --     then
+         --       (State.Next_Segment_Id =
+         --                  Element (State'Old.Segment,
+         --                           Last_Index (State'Old.Segment) -
+         --                             Positive (Config.NumberWaypointsOverlap) + 1) and
+         --          State.Next_First_Id =
+         --            Element (State'Old.Segment,
+         --                     Last_Index (State'Old.Segment) -
+         --                       Positive (Config.NumberWaypointsOverlap) + 2))
+         --     else
+         --       (State.Next_Segment_Id = 0 and State.Next_First_Id = 0));
 
 private
 
