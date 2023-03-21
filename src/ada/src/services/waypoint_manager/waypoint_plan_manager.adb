@@ -323,6 +323,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    -- Produce_Segment --
    ---------------------
 
+   --  function Is_Successor
+   --    (Path, Segment : Pos64_Vector;
+   --     Segment_Index : Positive) return Boolean
+   --  is
+   --     (f
+
+
    procedure Initialize_Segment
      (Path : Pos64_Vector;
       Desired_Segment_Length : Positive;
@@ -379,12 +386,20 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                    Desired_Segment_Length
                  then Desired_Segment_Length
                  else Integer (Length (Path)) - Path_Index + 1);
-         for I in 1 .. Len loop
+         Append (Segment, Element (Path, Path_Index));
+         Path_Index := Path_Index + 1;
+         for I in 2 .. Len loop
             Append (Segment, Element (Path, Path_Index));
             Path_Index := Path_Index + 1;
             pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
             pragma Loop_Invariant (Integer (Length (Segment)) = I);
             pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
+            pragma Loop_Invariant
+              (for all J in 2 .. I =>
+                 (Element (Segment, J - 1) =
+                      Element (Path, Initial_Path_Index + J - 2) and then
+                  Element (Segment, J) =
+                      Element (Path, Initial_Path_Index + J - 1)));
          end loop;
       end if;
 
