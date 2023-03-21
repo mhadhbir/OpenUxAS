@@ -71,6 +71,21 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Post =>
          (for all Item of Model (L_New) => Contains (M, Item));
 
+   procedure Lemma_First_Element_Unchanged_After_Append
+     (V_Old, V_New : Pos64_Vectors.Vector;
+      First_Item : Pos64;
+      New_Item : Pos64)
+     with Ghost,
+     Pre =>
+       Length (V_Old) >= 1 and then
+       Length (V_Old) < Capacity (V_Old) and then
+       Length (V_New) = Length (V_Old) + 1 and then
+       Model (V_Old) < Model (V_New) and then
+       Element (Model (V_Old), 1) = First_Item and then
+       Element (Model (V_New), Last_Index (V_Old) + 1) = New_Item,
+     Post =>
+       Element (Model (V_New), 1) = First_Item;
+
    procedure Lemma_List_Still_Linked_After_Append
      (M : Pos64_Nat64_Map;
       L_Old, L_New : Pos64_Vectors.Vector;
@@ -122,7 +137,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       New_Command : Boolean; -- Whether the most recent MissionCommand has yet -- been used to produce a segment
       Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached
                                              -- FirstWaypoint of next segment
-      Next_Segment_Index : Natural;
+      Next_Segment_Index_In_Path : Natural;
+      Cycle_Index_In_Path : Natural;
    end record;
 
    procedure Handle_MissionCommand
@@ -207,6 +223,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Config.NumberWaypointsToServe <= UInt32 (Max) and then
          State.Next_Segment_Id > 0 and then
          State.Next_First_Id > 0 and then
+         State.Next_Segment_Index_In_Path > 0 and then
          Pos_Vec_M.Contains (Model (State.Path),
                              Pos_Vec_M.First,
                              Pos_Vec_M.Last (Model (State.Path)),
