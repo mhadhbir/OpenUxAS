@@ -369,54 +369,24 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             end if;
             Append (Segment, Element (Path, Path_Index));
             Path_Index := Path_Index + 1;
-            pragma Loop_Invariant (Element (Model (Segment), 1) =
-                                     Element (Model (Path), Initial_Path_Index));
+            pragma Loop_Invariant
+              (Element (Model (Segment), 1) =
+                 Element (Model (Path), Initial_Path_Index));
             pragma Loop_Invariant (Integer (Length (Segment)) = I);
          end loop;
-      elsif Cycle_Index = 0 then
-
-         pragma Assert (Path_Index = Initial_Path_Index);
-
-         if Integer (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
-         then
-            Len := Desired_Segment_Length;
-            pragma Assert (Len >= 1);
-            for I in 1 .. Len loop
-               Append (Segment, Element (Path, Path_Index));
-               Path_Index := Path_Index + 1;
-               pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
-               pragma Loop_Invariant (Integer (Length (Segment)) = I);
-               pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
-            end loop;
-            pragma Assert (Positive (Length (Segment)) = Len);
-            pragma Assert
-              (Positive (Length (Segment)) = Desired_Segment_Length);
-         else
-            Len := Integer (Length (Path)) - Path_Index + 1;
-            pragma Assert (Len >= 1);
-            for I in 1 .. Len loop
-               Append (Segment, Element (Path, Path_Index));
-               Path_Index := Path_Index + 1;
-               pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
-               pragma Loop_Invariant (Integer (Length (Segment)) = I);
-               pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
-            end loop;
-            pragma Assert (Positive (Length (Segment)) = Len);
-            pragma Assert
-              (Positive (Length (Segment)) =
-                 Positive (Length (Path)) - Initial_Path_Index + 1);
-         end if;
       else
-         raise Program_Error;
+         Len := (if Integer (Length (Path)) - Path_Index + 1 >=
+                   Desired_Segment_Length
+                 then Desired_Segment_Length
+                 else Integer (Length (Path)) - Path_Index + 1);
+         for I in 1 .. Len loop
+            Append (Segment, Element (Path, Path_Index));
+            Path_Index := Path_Index + 1;
+            pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
+            pragma Loop_Invariant (Integer (Length (Segment)) = I);
+            pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
+         end loop;
       end if;
-
-      --  pragma Assert
-      --    (if Cycle_Index > 0
-      --     then Positive (Length (Segment)) = Desired_Segment_Length
-      --     else
-      --       (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
-      --        then Positive (Length (Segment)) = Desired_Segment_Length
-      --        else Positive (Length (Segment)) = Positive (Length (Path)) - Initial_Path_Index + 1));
 
    end Initialize_Segment;
 
