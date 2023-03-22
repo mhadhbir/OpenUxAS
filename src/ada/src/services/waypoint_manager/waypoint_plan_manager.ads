@@ -226,6 +226,13 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             Iter_Has_Element (State.Path, State.Cycle_Index_In_Path)) and then
          (for all Id of State.Path => Contains (State.Id_To_Waypoint, Id)),
        Post =>
+         State'Old.MC = State.MC and then
+         State'Old.Id_To_Waypoint = State.Id_To_Waypoint and then
+         State'Old.Id_To_Next_Id = State.Id_To_Next_Id and then
+         State'Old.Path = State.Path and then
+         State'Old.Cycle_Index_In_Path = State.Cycle_Index_In_Path and then
+         State'Old.Headed_To_First_Id = State.Headed_To_First_Id and then
+         State.New_Command = False and then
          Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Segment_Index_In_Path) and then
          (for all Id of State.Segment => Contains (State.Path, Id)) and then
          (if State.Cycle_Index_In_Path > 0
