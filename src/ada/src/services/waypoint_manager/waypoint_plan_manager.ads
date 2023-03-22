@@ -149,8 +149,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Length (MC.WaypointList) <= Max and then
          MC.FirstWaypoint > 0,
        Post =>
-         State.MC = MC
-         and then
+         State.MC = MC and then
          -- Every Waypoint stored by Id in Id_To_Waypoint came from MC.WaypointList
          (for all Id of Model (State.Id_To_Waypoint) =>
             Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
@@ -235,7 +234,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                (Element (State.Path, State.Next_Segment_Index_In_Path) =
                   Element (State.Segment, Integer (Length (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1)))
           else
-            (if Positive (Length (State.Path)) - State'Old.Cycle_Index_In_Path + 1 >=
+            (if Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 >=
                Integer (Config.NumberWaypointsToServe)
              then
                (Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
@@ -243,7 +242,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                   Element (State.Segment, Integer (Length (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1))
              else
                (Positive (Length (State.Segment)) =
-                    Positive (Length (State.Path)) - State'Old.Cycle_Index_In_Path + 1 and then
+                    Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 and then
                   State.Next_Segment_Index_In_Path = 0)));
 
 
