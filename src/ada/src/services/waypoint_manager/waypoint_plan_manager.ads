@@ -226,9 +226,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             Iter_Has_Element (State.Path, State.Cycle_Index_In_Path)) and then
          (for all Id of State.Path => Contains (State.Id_To_Waypoint, Id)),
          Post =>
-           -- The line below should NOT prove but is proving
-           Integer (Length (State.Segment)) = 4 and then
-           -- The rest of this is as I think it should be
            State'Old.MC = State.MC and then
            State'Old.Id_To_Waypoint = State.Id_To_Waypoint and then
            State'Old.Id_To_Next_Id = State.Id_To_Next_Id and then
@@ -239,20 +236,30 @@ package Waypoint_Plan_Manager with SPARK_Mode is
            Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Segment_Index_In_Path) and then
            (for all Id of State.Segment => Contains (State.Path, Id)) and then
            (if State.Cycle_Index_In_Path > 0
-              then
-                (Integer (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
-                   (Element (State.Path, State.Next_Segment_Index_In_Path) =
-                      Element (State.Segment,
-                               Integer (Length (State.Segment)) -
-                                 Integer (Config.NumberWaypointsOverlap) + 1)))
-                  else
+            then
+              (Integer (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
+               and then
+               (Element (State.Path, State.Next_Segment_Index_In_Path) =
+                  Element (State.Segment,
+                           Integer (Length (State.Segment)) -
+                             Integer (Config.NumberWaypointsOverlap) + 1)))
+            else
               (if Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 >=
                  Integer (Config.NumberWaypointsToServe)
-                   then
-                 (Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
-                      Element (State.Path, State.Next_Segment_Index_In_Path) =
-                    Element (State.Segment, Integer (Length (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1))
-                   else
+               then
+                 (Positive (Length (State.Segment)) =
+                      Integer (Config.NumberWaypointsToServe)
+                  and then
+                    (if Element (State.Segment, Last_Index (State.Segment)) /=
+                         Element (State.Path, Last_Index (State.Path))
+                     then
+                         Element (State.Path, State.Next_Segment_Index_In_Path) =
+                          Element (State.Segment,
+                                   Integer (Length (State.Segment)) -
+                                     Integer (Config.NumberWaypointsOverlap) + 1)
+                      else
+                         State.Next_Segment_Index_In_Path = 0))
+                 else
                  (Positive (Length (State.Segment)) =
                       Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 and then
                     State.Next_Segment_Index_In_Path = 0)));

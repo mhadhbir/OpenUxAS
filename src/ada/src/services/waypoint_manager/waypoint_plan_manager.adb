@@ -458,41 +458,42 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          else
             State.Next_Segment_Id := 0;
             State.Next_First_Id := 0;
+            State.Next_Segment_Index_In_Path := 0;
          end if;
       end if;
 
       State.New_Command := False;
 
-      declare
-         MC_Out : MissionCommand := State.MC;
-         WP_List : WP_Seq;
-         Id : Pos64;
-         WP : Waypoint;
-      begin
-         -- MC_Out.FirstWaypoint := First_Id;
-         MC_Out.FirstWaypoint :=
-           (if Length (State.Segment) > 1
-            then Element (State.Segment, 2)
-            else Element (State.Segment, 1));
-         for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
-            Id := Element (State.Segment, I);
-            --if Contains (State.Id_To_Waypoint, Id) then
-               WP := Element (State.Id_To_Waypoint, Id);
-               if I = Last_Index (State.Segment) then
-                  WP.NextWaypoint := WP.Number;
-                  -- TODO: Extend SPARK messages to handle
-                  -- VehicleAction -> NavigationAction -> LoiterAction
-                  -- VehicleAction -> PayloadAction -> GimbalAngleAction
-               end if;
-               -- WP.TurnType := Config.TurnType;
-               WP_List := Add (WP_List, WP);
-            --end if;
-            pragma Loop_Invariant
-              (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
-         end loop;
-         MC_Out.WaypointList := WP_List;
-         sendBroadcastMessage (Mailbox, MC_Out);
-      end;
+      --  declare
+      --     MC_Out : MissionCommand := State.MC;
+      --     WP_List : WP_Seq;
+      --     Id : Pos64;
+      --     WP : Waypoint;
+      --  begin
+      --     -- MC_Out.FirstWaypoint := First_Id;
+      --     MC_Out.FirstWaypoint :=
+      --       (if Length (State.Segment) > 1
+      --        then Element (State.Segment, 2)
+      --        else Element (State.Segment, 1));
+      --     for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
+      --        Id := Element (State.Segment, I);
+      --        --if Contains (State.Id_To_Waypoint, Id) then
+      --           WP := Element (State.Id_To_Waypoint, Id);
+      --           if I = Last_Index (State.Segment) then
+      --              WP.NextWaypoint := WP.Number;
+      --              -- TODO: Extend SPARK messages to handle
+      --              -- VehicleAction -> NavigationAction -> LoiterAction
+      --              -- VehicleAction -> PayloadAction -> GimbalAngleAction
+      --           end if;
+      --           -- WP.TurnType := Config.TurnType;
+      --           WP_List := Add (WP_List, WP);
+      --        --end if;
+      --        pragma Loop_Invariant
+      --          (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
+      --     end loop;
+      --     MC_Out.WaypointList := WP_List;
+      --     sendBroadcastMessage (Mailbox, MC_Out);
+      --  end;
 
    end Produce_Segment;
 
