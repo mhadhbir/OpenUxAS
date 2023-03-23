@@ -149,8 +149,13 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      with Ghost, Global => null;
 
    function Elements_Are_Unique
-     (V : Pos64_Vectors.Formal_Model.M.Sequence) return Boolean
-   with Ghost, Global => null;
+     (V : Pos64_Vector) return Boolean
+     with Ghost, Global => null;
+
+   function Id_Keys_Match_Waypoint_Ids
+     (Id_To_Next_Id : Pos64_Nat64_Map;
+      Id_To_Waypoint : Pos64_WP_Map) return Boolean
+     with Ghost, Global => null;
 
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;
@@ -175,9 +180,10 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          --    Contains (Model (State.Id_To_Waypoint), Id)) and then
          Has_Same_Keys (Model (State.Id_To_Waypoint),
                         Model (State.Id_To_Next_Id)) and then
-         (for all Id of Model (State.Id_To_Next_Id) =>
-            Element (Model (State.Id_To_Next_Id), Id) =
-              Element (Model (State.Id_To_Waypoint), Id).NextWaypoint) and then
+         Id_Keys_Match_Waypoint_Ids (State.Id_To_Next_Id, State.Id_To_Waypoint) and then
+         --  (for all Id of Model (State.Id_To_Next_Id) =>
+         --     Element (Model (State.Id_To_Next_Id), Id) =
+         --       Element (Model (State.Id_To_Waypoint), Id).NextWaypoint) and then
          -- If MC.FirstWaypoint cannot be found in Id_To_Next_Id,
          -- then path, cycle, and "next" segment info should be 0/empty.
          -- Otherwise, MC.FirstWaypoint should be element 1 or 2 of Path.
@@ -190,10 +196,11 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          -- Every Id in Path should come from Id_To_Next_Id, be unique, and its
          -- successor should be corresponding value stored in Id_To_Next_Id
          (for all Id of Model (State.Path) => Contains (State.Id_To_Next_Id, Id)) and then
-         (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (State.Path)) =>
-            (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (State.Path)) =>
-                 (if I /= J then Element (Model (State.Path), I) /=
-                      Element (Model (State.Path), J)))) and then
+         Elements_Are_Unique (State.Path) and then
+         --  (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (State.Path)) =>
+         --     (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (State.Path)) =>
+         --          (if I /= J then Element (Model (State.Path), I) /=
+         --               Element (Model (State.Path), J)))) and then
          (for all I in First_Index (State.Path) .. Last_Index (State.Path) - 1 =>
             Element (State.Id_To_Next_Id, Element (State.Path, I)) =
               Element (State.Path, I + 1)) and then

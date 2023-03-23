@@ -80,15 +80,23 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    is
      (for all Id of Model (Id_To_Waypoint) =>
            Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
-        Get (Model (Id_To_Waypoint), Id)));
+                     Get (Model (Id_To_Waypoint), Id)));
 
    function Elements_Are_Unique
-     (V : Pos64_Vectors.Formal_Model.M.Sequence) return Boolean
+     (V : Pos64_Vector) return Boolean
    is
-     (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (V) =>
-        (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (V) =>
+     (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
+        (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
              (if I /= J then
-                   Element (V, I) /= Element (V, J))));
+                     Element (Model (V), I) /= Element (Model (V), J))));
+
+   function Id_Keys_Match_Waypoint_Ids
+     (Id_To_Next_Id : Pos64_Nat64_Map;
+      Id_To_Waypoint : Pos64_WP_Map) return Boolean
+   is
+     (for all Id of Model (Id_To_Next_Id) =>
+           Element (Model (Id_To_Next_Id), Id) =
+           Element (Model (Id_To_Waypoint), Id).NextWaypoint);
 
    ---------------------------------
    -- Extract_MissionCommand_Maps --
@@ -101,15 +109,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre => Length (WaypointList) <= Max,
      Post =>
-       Waypoints_Are_Subset (WaypointList, Id_To_Waypoint)  and then
-       --  (for all Id of Model (Id_To_Waypoint) =>
-       --     Has_Key (Model (Id_To_Next_Id), Id)) and then
-       --  (for all Id of Model (Id_To_Next_Id) =>
-       --     Has_Key (Model (Id_To_Waypoint), Id)) and then
+       Waypoints_Are_Subset (WaypointList, Id_To_Waypoint) and then
        Has_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)) and then
-       (for all Id of Model (Id_To_Next_Id) =>
-          Element (Model (Id_To_Next_Id), Id) =
-            Element (Model (Id_To_Waypoint), Id).NextWaypoint);
+       Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
    procedure Extract_MissionCommand_Maps
      (WaypointList : WP_Seq;
@@ -141,24 +143,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
          pragma Loop_Invariant (Integer (Length (Id_To_Next_Id)) <= I - WP_Sequences.First + 1);
          pragma Loop_Invariant (Integer (Length (Id_To_Waypoint)) <= I - WP_Sequences.First + 1);
-         --  pragma Loop_Invariant
-         --    (for all Id of Model (Id_To_Waypoint) =>
-         --       Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
-         --       Get (Model (Id_To_Waypoint), Id)));
          pragma Loop_Invariant
            (Waypoints_Are_Subset (WaypointList, Id_To_Waypoint));
          pragma Loop_Invariant
            (Has_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)));
-         --  pragma Loop_Invariant
-         --    (for all Id of Model (Id_To_Waypoint) =>
-         --         Has_Key (Model (Id_To_Next_Id), Id));
-         --  pragma Loop_Invariant
-         --    (for all Id of Model (Id_To_Next_Id) =>
-         --         Has_Key (Model (Id_To_Waypoint), Id));
          pragma Loop_Invariant
-           (for all Id of Model (Id_To_Next_Id) =>
-                Element (Model (Id_To_Next_Id), Id) =
-                Element (Model (Id_To_Waypoint), Id).NextWaypoint);
+           (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
       end loop;
 
    end Extract_MissionCommand_Maps;
@@ -188,7 +178,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       State.Next_Segment_Index := 0;
       State.Cycle_Index := 0;
 
-      Extract_MissionCommand_Maps (State.MC.WaypointList, State.Id_To_Waypoint, State.Id_To_Next_Id);
+      Extract_MissionCommand_Maps
+        (State.MC.WaypointList, State.Id_To_Waypoint, State.Id_To_Next_Id);
 
       -- Check whether First_Id can be found. If not, return.
       if not Contains (State.Id_To_Next_Id, First_Id) then
@@ -227,7 +218,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
         (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
 
       pragma Assert
-        (Elements_Are_Unique (Model (Id_List)));
+        (Elements_Are_Unique (Id_List));
 
       pragma Assert (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));
 
@@ -273,11 +264,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
                Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
 
-               --  Lemma_Map_Still_Contains_List_After_Append
-               --    (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
-               --
-               --  Lemma_List_Still_Linked_After_Append
-               --    (State.Id_To_Next_Id, Id_List_Tmp, Id_List, Succ);
             end;
          else
             -- Should be unreachable.
@@ -306,7 +292,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Element (Id_List, I + 1));
 
          pragma Loop_Invariant
-           (Elements_Are_Unique (Model (Id_List)));
+           (Elements_Are_Unique (Id_List));
 
          pragma Loop_Invariant (State.Cycle_Index = 0);
       end loop;
