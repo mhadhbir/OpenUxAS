@@ -187,6 +187,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          return;
       end if;
 
+      State.Next_Segment_Index := 1;
+
       -- Check whether there is a predecessor to First_Id that isn't just
       -- First_Id itself. If so, it becomes the first element of the list.
       for Id of State.Id_To_Next_Id loop
@@ -194,13 +196,19 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Successor (State.Id_To_Next_Id, Id) = First_Id
          then
             Append (Id_List, Id);
-            State.Next_Segment_Index := 1;
             exit;
          end if;
       end loop;
 
       -- Append First_Id to the list
       Append (Id_List, First_Id);
+      --  pragma Assert (Element (Id_List, State.Next_Segment_Index) = First_Id
+      --                 or else
+      --                 Element (Id_List, State.Next_Segment_Index + 1) = First_Id);
+      pragma Assert (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
+                     or else
+                     Successor (State.Id_To_Next_Id,
+                       Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
 
       -- Assert properties needed for container min and max size
       pragma Assert (not Is_Empty (Id_List));
@@ -277,8 +285,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
          pragma Loop_Invariant (State.Id_To_Waypoint = State.Id_To_Waypoint'Loop_Entry);
 
-         pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
-                                Element (Model (Id_List), 2) = First_Id);
+         --  pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
+         --                         Element (Model (Id_List), 2) = First_Id);
+
+         pragma Loop_Invariant
+           (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
+            or else
+            Successor (State.Id_To_Next_Id,
+              Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
 
          pragma Loop_Invariant
            (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));

@@ -190,9 +190,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
             then State.Next_Segment_Index = 0 and State.Cycle_Index = 0 and
                  Is_Empty (State.Path)) and then
-         (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
-            then (Element (Model (State.Path), 1) = MC.FirstWaypoint or else
-                  Element (Model (State.Path), 2) = MC.FirstWaypoint)) and then
+         --  (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
+         --     then (Element (Model (State.Path), 1) = MC.FirstWaypoint or else
+         --               Element (Model (State.Path), 2) = MC.FirstWaypoint)) and then
+         (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint) then
+            (Element (Model (State.Path), State.Next_Segment_Index) = MC.FirstWaypoint
+             or else
+               Element (State.Id_To_Next_Id,
+                        Element (Model (State.Path),
+                                 State.Next_Segment_Index)) = MC.FirstWaypoint)) and then
          -- Every Id in Path should come from Id_To_Next_Id, be unique, and its
          -- successor should be corresponding value stored in Id_To_Next_Id
          (for all Id of Model (State.Path) => Contains (State.Id_To_Next_Id, Id)) and then
