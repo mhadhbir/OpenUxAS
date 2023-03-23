@@ -15,6 +15,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
 
    subtype Nat64 is Int64 range 0 .. Int64'Last;
 
+   subtype Path_Index is Natural range 0 .. Integer (Max);
+
    function Pos64_Hash (X : Pos64) return Ada.Containers.Hash_Type is
      (Ada.Containers.Hash_Type'Mod (X));
 
@@ -128,18 +130,27 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       MC : MissionCommand;  -- Copy of most recent MissionCommand
       Id_To_Waypoint : Pos64_WP_Map;   -- Id -> copy of Waypoint message from MC
       Id_To_Next_Id : Pos64_Nat64_Map; -- Id -> successor waypoint Id in MC
-      Path : Pos64_Vector;  -- Ordered list of waypoint Ids, built using info in -- Id_To_Next_Id, starting from MC.FirstWaypoint
-      Cycle_Id : Nat64; -- If MC.WaypointList contains a cycle, this is the
-                        -- value in Path to cycle back to after reaching the end
-      Next_Segment_Id : Nat64 := 0; -- 1st Id of next segment
-      Next_First_Id : Nat64 := 0; -- 2nd Id of next segment (MC.FirstWaypoint)
+      Path : Pos64_Vector;  -- Ordered list of waypoint Ids, built using info in Id_To_Next_Id, starting from MC.FirstWaypoint
+      Cycle_Index : Path_Index; -- If MC.WaypointList has a cycle, this is the index in Path that forms a cycle with the the last element
       Segment : Pos64_Vector; -- Next segment
+      Next_Segment_Index : Path_Index; -- Index in Path for start of segment after this one
       New_Command : Boolean; -- Whether the most recent MissionCommand has yet -- been used to produce a segment
-      Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached
-                                             -- FirstWaypoint of next segment
-      Next_Segment_Index_In_Path : Natural;
-      Cycle_Index_In_Path : Natural;
+      Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached -- FirstWaypoint of next segment
    end record;
+
+   function Waypoints_Are_Subset
+     (WaypointList : WP_Seq;
+      Id_To_Waypoint : Pos64_WP_Map) return Boolean
+   with Ghost, Global => null;
+
+   function Has_Same_Keys
+     (M : Pos64_WP_Maps.Formal_Model.M.Map;
+      N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
+     with Ghost, Global => null;
+
+   function Elements_Are_Unique
+     (V : Pos64_Vectors.Formal_Model.M.Sequence) return Boolean
+   with Ghost, Global => null;
 
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;
@@ -150,6 +161,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          MC.FirstWaypoint > 0,
        Post =>
          State.MC = MC and then
+         Waypoints_Are_Subset (State.MC.WaypointList, State.Id_To_Waypoint) and then
          -- Every Waypoint stored by Id in Id_To_Waypoint came from MC.WaypointList
          --  (for all Id of Model (State.Id_To_Waypoint) =>
          --     Contains (MC.WaypointList, WP_Sequences.First, Last (State.MC.WaypointList),
@@ -157,10 +169,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          -- Basic relationships: Id_To_Waypoint and Id_To_Next_Id should have
          -- the same keys, and each (Id, NextId) of Id_To_Next_Id should match
          -- the corresponding (Id, Waypoint.NextWaypoint) of Id_To_Waypoint
-         (for all Id of Model (State.Id_To_Waypoint) =>
-            Contains (Model (State.Id_To_Next_Id), Id)) and then
-         (for all Id of Model (State.Id_To_Next_Id) =>
-           Contains (Model (State.Id_To_Waypoint), Id)) and then
+         --  (for all Id of Model (State.Id_To_Waypoint) =>
+         --     Contains (Model (State.Id_To_Next_Id), Id)) and then
+         --  (for all Id of Model (State.Id_To_Next_Id) =>
+         --    Contains (Model (State.Id_To_Waypoint), Id)) and then
+         Has_Same_Keys (Model (State.Id_To_Waypoint),
+                        Model (State.Id_To_Next_Id)) and then
          (for all Id of Model (State.Id_To_Next_Id) =>
             Element (Model (State.Id_To_Next_Id), Id) =
               Element (Model (State.Id_To_Waypoint), Id).NextWaypoint) and then
@@ -168,8 +182,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          -- then path, cycle, and "next" segment info should be 0/empty.
          -- Otherwise, MC.FirstWaypoint should be element 1 or 2 of Path.
          (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
-            then State.Next_Segment_Id = 0 and State.Next_First_Id = 0 and
-                 State.Cycle_Id = 0 and Is_Empty (State.Path)) and then
+            then State.Next_Segment_Index = 0 and State.Cycle_Index = 0 and
+                 Is_Empty (State.Path)) and then
          (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
             then (Element (Model (State.Path), 1) = MC.FirstWaypoint or else
                   Element (Model (State.Path), 2) = MC.FirstWaypoint)) and then
@@ -187,28 +201,25 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          -- Id in Path according to Id_To_Next_Id, and it should be in elsewhere
          -- in Path. Otherwise, Path should be empty, or the successor to the
          -- last Id in Path should be 0, itself, or not found in Id_To_Next_Id.
-         (if State.Cycle_Id > 0 then
-            State.Cycle_Id =
-              Element (Model (State.Id_To_Next_Id),
-                       Pos_Vec_M.Get (Model (State.Path),
-                                      Pos_Vec_M.Last (Model (State.Path))))
-          and Pos_Vec_M.Contains (Model (State.Path),
-                                  Pos_Vec_M.First,
-                                  Pos_Vec_M.Last (Model (State.Path)),
-                                  State.Cycle_Id)) and then
-          (if State.Cycle_Id = 0 then
-             (Is_Empty (State.Path) or else
-              Element (Model (State.Id_To_Next_Id),
-                       Pos_Vec_M.Get (Model (State.Path),
-                                      Pos_Vec_M.Last (Model (State.Path)))) = 0 or else
-              Element (Model (State.Id_To_Next_Id),
-                       Pos_Vec_M.Get (Model (State.Path),
-                                      Pos_Vec_M.Last (Model (State.Path)))) =
-                       Pos_Vec_M.Get (Model (State.Path),
-                                      Pos_Vec_M.Last (Model (State.Path))) or else
-              not Contains (Model (State.Id_To_Next_Id),
-                            Pos_Vec_M.Get (Model (State.Path),
-                                           Pos_Vec_M.Last (Model (State.Path))))));
+         (if State.Cycle_Index > 0
+            then
+              Element (Model (State.Path), State.Cycle_Index) =
+                Element (Model (State.Id_To_Next_Id),
+                         Pos_Vec_M.Get (Model (State.Path),
+                                        Pos_Vec_M.Last (Model (State.Path))))); -- and then
+         --  (if State.Cycle_Index = 0 then
+         --      (Is_Empty (State.Path) or else
+         --       Element (Model (State.Id_To_Next_Id),
+         --                Pos_Vec_M.Get (Model (State.Path),
+         --                               Pos_Vec_M.Last (Model (State.Path)))) = 0 or else
+         --       Element (Model (State.Id_To_Next_Id),
+         --                Pos_Vec_M.Get (Model (State.Path),
+         --                               Pos_Vec_M.Last (Model (State.Path)))) =
+         --                Pos_Vec_M.Get (Model (State.Path),
+         --                               Pos_Vec_M.Last (Model (State.Path))) or else
+         --       not Contains (Model (State.Id_To_Next_Id),
+         --                     Pos_Vec_M.Get (Model (State.Path),
+         --                                    Pos_Vec_M.Last (Model (State.Path))))));
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
@@ -221,30 +232,30 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Config.NumberWaypointsToServe > Config.NumberWaypointsOverlap and then
          Config.NumberWaypointsToServe <= UInt32 (Max) and then
          Length (State.Path) > 0 and then
-         Iter_Has_Element (State.Path, State.Next_Segment_Index_In_Path) and then
-         (if State.Cycle_Index_In_Path > 0 then
-            Iter_Has_Element (State.Path, State.Cycle_Index_In_Path)) and then
+         Iter_Has_Element (State.Path, State.Next_Segment_Index) and then
+         (if State.Cycle_Index > 0 then
+            Iter_Has_Element (State.Path, State.Cycle_Index)) and then
          (for all Id of State.Path => Contains (State.Id_To_Waypoint, Id)),
          Post =>
            State'Old.MC = State.MC and then
            State'Old.Id_To_Waypoint = State.Id_To_Waypoint and then
            State'Old.Id_To_Next_Id = State.Id_To_Next_Id and then
            State'Old.Path = State.Path and then
-           State'Old.Cycle_Index_In_Path = State.Cycle_Index_In_Path and then
+           State'Old.Cycle_Index = State.Cycle_Index and then
            State'Old.Headed_To_First_Id = State.Headed_To_First_Id and then
            State.New_Command = False and then
-           Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Segment_Index_In_Path) and then
+           Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Segment_Index) and then
            (for all Id of State.Segment => Contains (State.Path, Id)) and then
-           (if State.Cycle_Index_In_Path > 0
+           (if State.Cycle_Index > 0
             then
               (Integer (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
                and then
-               (Element (State.Path, State.Next_Segment_Index_In_Path) =
+               (Element (State.Path, State.Next_Segment_Index) =
                   Element (State.Segment,
                            Integer (Length (State.Segment)) -
                              Integer (Config.NumberWaypointsOverlap) + 1)))
             else
-              (if Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 >=
+              (if Positive (Length (State.Path)) - State'Old.Next_Segment_Index + 1 >=
                  Integer (Config.NumberWaypointsToServe)
                then
                  (Positive (Length (State.Segment)) =
@@ -253,16 +264,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                     (if Element (State.Segment, Last_Index (State.Segment)) /=
                          Element (State.Path, Last_Index (State.Path))
                      then
-                         Element (State.Path, State.Next_Segment_Index_In_Path) =
+                         Element (State.Path, State.Next_Segment_Index) =
                           Element (State.Segment,
                                    Integer (Length (State.Segment)) -
                                      Integer (Config.NumberWaypointsOverlap) + 1)
                       else
-                         State.Next_Segment_Index_In_Path = 0))
+                         State.Next_Segment_Index = 0))
                  else
                  (Positive (Length (State.Segment)) =
-                      Positive (Length (State.Path)) - State'Old.Next_Segment_Index_In_Path + 1 and then
-                    State.Next_Segment_Index_In_Path = 0)));
+                      Positive (Length (State.Path)) - State'Old.Next_Segment_Index + 1 and then
+                    State.Next_Segment_Index = 0)));
 
 private
 
