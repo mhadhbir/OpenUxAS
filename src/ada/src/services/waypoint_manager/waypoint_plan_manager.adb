@@ -238,31 +238,32 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       while Length (Path) < Length (Id_To_Next_Id) loop
 
-         if Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
-            not Contains (Path, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
-           Successor (Id_To_Next_Id, Last_Element (Path)) = Last_Element (Path)
+         if Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
+           Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
+           Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
+         then
+            Cycle_Index :=
+              Find_Index (Path,
+                          Successor (Id_To_Next_Id, Last_Element (Path)));
+            return;
+         elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
+           not Contains (Id_To_Next_Id, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
+           Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path)))
          then
             return;
          else
-            if Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) then
-               Cycle_Index :=
-                 Find_Index (Path,
-                             Successor (Id_To_Next_Id, Last_Element (Path)));
-               pragma Assert (Cycle_Index > 0);
-               pragma Assert (Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
-               return;
-            else
-               declare
-                  Current_Id : constant Pos64 := Last_Element (Path);
-                  Succ : constant Pos64 :=
-                    Successor (Id_To_Next_Id, Last_Element (Path)) with Ghost;
-               begin
-                  Path_Tmp := Path;
-                  pragma Assert
-                    (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
-                  Append (Path, Successor (Id_To_Next_Id, Last_Element (Path)));
-               end;
-            end if;
+            declare
+               Current_Id : constant Pos64 := Last_Element (Path);
+               Succ : constant Pos64 :=
+                 Successor (Id_To_Next_Id, Last_Element (Path)) with Ghost;
+            begin
+               Path_Tmp := Path;
+               pragma Assert
+                 (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
+               Append (Path, Successor (Id_To_Next_Id, Last_Element (Path)));
+               pragma Assert
+                 (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
+            end;
          end if;
 
          pragma Loop_Invariant (not Is_Empty (Path));
@@ -289,18 +290,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       end loop;
 
-      if Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
-        not Contains (Path, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
-        Successor (Id_To_Next_Id, Last_Element (Path)) = Last_Element (Path)
+      if Element (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
+        Contains (Path, Element (Id_To_Next_Id, Last_Element (Path))) and then
+        Element (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
       then
-         null;
-      else
-         if Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) then
-            Cycle_Index :=
-              Find_Index (Path,
-                          Successor (Id_To_Next_Id, Last_Element (Path)));
-            pragma Assert (Cycle_Index > 0);
-         end if;
+         Cycle_Index :=
+           Find_Index (Path,
+                       Successor (Id_To_Next_Id, Last_Element (Path)));
       end if;
 
    end Construct_Path;
