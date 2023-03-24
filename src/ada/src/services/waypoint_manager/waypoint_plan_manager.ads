@@ -214,18 +214,30 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          -- Id in Path according to Id_To_Next_Id, and it should be in elsewhere
          -- in Path. Otherwise, Path should be empty, or the successor to the
          -- last Id in Path should be 0, itself, or not found in Id_To_Next_Id.
-     (if Length (State.Path) > 0 and then
-        not (Element (State.Id_To_Next_Id, Last_Element (State.Path)) = 0 or else
-                 Element (State.Id_To_Next_Id, Last_Element (State.Path)) =
-               Last_Element (State.Path) or else
-                 not Contains (State.Id_To_Next_Id,
-                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (State.Path)))))
-            and then Contains (State.Id_To_Next_Id,
-                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (State.Path))))
+     (if Length (State.Path) > 0 then
+        (if Element (State.Id_To_Next_Id, Last_Element (State.Path)) = 0 or else
+              not Contains (State.Path, Pos64 (Element (State.Id_To_Next_Id, Last_Element (State.Path)))) or else
+                Element (State.Id_To_Next_Id, Last_Element (State.Path)) = Last_Element (State.Path)
             then
-              State.Cycle_Index > 0
-                else
-                  State.Cycle_Index = 0);
+                State.Cycle_Index = 0
+            else
+              (if Contains (State.Path, Element (State.Id_To_Next_Id, Last_Element (State.Path)))
+                 then
+                   State.Cycle_Index > 0
+                     else
+                       State.Cycle_Index = 0)));
+
+        --  not (Element (State.Id_To_Next_Id, Last_Element (State.Path)) = 0 or else
+        --           Element (State.Id_To_Next_Id, Last_Element (State.Path)) =
+        --         Last_Element (State.Path) or else
+        --           not Contains (State.Id_To_Next_Id,
+        --                         Pos64 (Element (State.Id_To_Next_Id, Last_Element (State.Path)))))
+        --      and then Contains (State.Id_To_Next_Id,
+        --                         Pos64 (Element (State.Id_To_Next_Id, Last_Element (State.Path))))
+        --      then
+        --        State.Cycle_Index > 0
+        --          else
+        --            State.Cycle_Index = 0);
 
         --  State.Cycle_Index > 0
         --      then

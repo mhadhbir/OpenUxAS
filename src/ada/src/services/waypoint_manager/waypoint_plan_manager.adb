@@ -169,6 +169,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          not Is_Empty (Id_To_Next_Id) and then
          Contains (Id_To_Next_Id, First_Id),
          Post =>
+           Next_Segment_Index > 0 and then
+           not Is_Empty (Path) and then
+           Iter_Has_Element (Path, Next_Segment_Index) and then
            (Element (Model (Path), Next_Segment_Index) = First_Id or else
               Element (Id_To_Next_Id, Element (Model (Path),
                 Next_Segment_Index)) = First_Id) and then
@@ -336,141 +339,151 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          return;
       end if;
 
-      State.Next_Segment_Index := 1;
+      Construct_Path (First_Id,
+                      State.Id_To_Next_Id,
+                      State.Path,
+                      State.Next_Segment_Index,
+                      State.Cycle_Index);
 
-      -- Check whether there is a predecessor to First_Id that isn't just
-      -- First_Id itself. If so, it becomes the first element of the list.
-      for Id of State.Id_To_Next_Id loop
-         if not (Id = First_Id) and then
-           Successor (State.Id_To_Next_Id, Id) = First_Id
-         then
-            Append (Id_List, Id);
-            exit;
-         end if;
-      end loop;
+      pragma Assert (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
+                     Element (State.Id_To_Next_Id, Element (Model (State.Path),
+                       State.Next_Segment_Index)) = First_Id);
 
-      -- Append First_Id to the list
-      Append (Id_List, First_Id);
-      --  pragma Assert (Element (Id_List, State.Next_Segment_Index) = First_Id
+      --  State.Next_Segment_Index := 1;
+      --
+      --  -- Check whether there is a predecessor to First_Id that isn't just
+      --  -- First_Id itself. If so, it becomes the first element of the list.
+      --  for Id of State.Id_To_Next_Id loop
+      --     if not (Id = First_Id) and then
+      --       Successor (State.Id_To_Next_Id, Id) = First_Id
+      --     then
+      --        Append (Id_List, Id);
+      --        exit;
+      --     end if;
+      --  end loop;
+      --
+      --  -- Append First_Id to the list
+      --  Append (Id_List, First_Id);
+      --  --  pragma Assert (Element (Id_List, State.Next_Segment_Index) = First_Id
+      --  --                 or else
+      --  --                 Element (Id_List, State.Next_Segment_Index + 1) = First_Id);
+      --  pragma Assert (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
       --                 or else
-      --                 Element (Id_List, State.Next_Segment_Index + 1) = First_Id);
-      pragma Assert (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
-                     or else
-                     Successor (State.Id_To_Next_Id,
-                       Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
-
-      -- Assert properties needed for container min and max size
-      pragma Assert (not Is_Empty (Id_List));
-      pragma Assert (Length (Id_List) <= 2);
-
-      pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
-                       (Element (Model (Id_List), 1) = First_Id or else
-                        Element (Model (Id_List), 2) = First_Id));
-
-      pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-                       Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
-                       Element (Model (Id_List), I + 1));
-
-      pragma Assert
-        (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
-
-      pragma Assert
-        (Elements_Are_Unique (Id_List));
-
-      pragma Assert (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));
-
-      while Length (Id_List) < Length (State.Id_To_Next_Id) loop
-
-         if Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = 0
-           or else Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = Last_Element (Id_List)
-         then
-            -- Candidate successor is 0 or points to itself.
-            -- There is no cycle. Set the path and return.
-            State.Path := Id_List;
-            return;
-         elsif not Contains (State.Id_To_Next_Id,
-                             Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
-         then
-            -- Candidate successor can't be found.
-            -- There is no cycle. Set the path and return.
-            State.Path := Id_List;
-            return;
-         elsif Contains (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)))
-         then
-            -- There is a cycle.
-            -- Set the cycle id and path and return.
-            pragma Assert
-              (not (Element (State.Id_To_Next_Id, Last_Element (Id_List)) = 0 or else
-                 Element (State.Id_To_Next_Id, Last_Element (Id_List)) =
-               Last_Element (Id_List) or else
-                 not Contains (State.Id_To_Next_Id,
-                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))))
-            and then Contains (State.Id_To_Next_Id,
-                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))));
-            State.Cycle_Index := Find_Index (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
-            pragma Assert (State.Cycle_Index > 0);
-            -- State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
-            State.Path := Id_List;
-            return;
-         elsif Contains (State.Id_To_Next_Id, Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
-         then
-            -- Found a successor that's not a cycle.
-            -- Append it to the list and continue.
-            declare
-               Current_Id : constant Pos64 := Last_Element (Id_List);
-               Succ : constant Pos64 :=
-                 Successor (State.Id_To_Next_Id, Last_Element (Id_List)) with Ghost;
-            begin
-
-               Id_List_Tmp := Id_List;
-
-               pragma Assert
-                 (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
-
-               Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
-
-            end;
-         else
-            -- Should be unreachable.
-            -- Making all previous cases explicit seems to aid proof.
-            raise Program_Error;
-         end if;
-
-         pragma Loop_Invariant (not Is_Empty (Id_List));
-         pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
-
-         pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
-         pragma Loop_Invariant (State.Id_To_Waypoint = State.Id_To_Waypoint'Loop_Entry);
-
-         --  pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
-         --                         Element (Model (Id_List), 2) = First_Id);
-
-         pragma Loop_Invariant
-           (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
-            or else
-            Successor (State.Id_To_Next_Id,
-              Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
-
-         pragma Loop_Invariant
-           (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));
-
-         pragma Loop_Invariant
-           (for all Id of Model (Id_List) => Contains (State.Id_To_Next_Id, Id));
-
-         pragma Loop_Invariant
-           (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
-              Successor (State.Id_To_Next_Id, Element (Id_List, I)) =
-              Element (Id_List, I + 1));
-
-         pragma Loop_Invariant
-           (Elements_Are_Unique (Id_List));
-
-         pragma Loop_Invariant (State.Cycle_Index = 0);
-
-         pragma Loop_Invariant (State.MC = MC);
-      end loop;
-
-      State.Path := Id_List;
+      --                 Successor (State.Id_To_Next_Id,
+      --                   Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
+      --
+      --  -- Assert properties needed for container min and max size
+      --  pragma Assert (not Is_Empty (Id_List));
+      --  pragma Assert (Length (Id_List) <= 2);
+      --
+      --  pragma Assert (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) then
+      --                   (Element (Model (Id_List), 1) = First_Id or else
+      --                    Element (Model (Id_List), 2) = First_Id));
+      --
+      --  pragma Assert (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
+      --                   Successor (State.Id_To_Next_Id, Element (Model (Id_List), I)) =
+      --                   Element (Model (Id_List), I + 1));
+      --
+      --  pragma Assert
+      --    (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
+      --
+      --  pragma Assert
+      --    (Elements_Are_Unique (Id_List));
+      --
+      --  pragma Assert (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));
+      --
+      --  while Length (Id_List) < Length (State.Id_To_Next_Id) loop
+      --
+      --     if Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = 0
+      --       or else Successor (State.Id_To_Next_Id, Last_Element (Id_List)) = Last_Element (Id_List)
+      --     then
+      --        -- Candidate successor is 0 or points to itself.
+      --        -- There is no cycle. Set the path and return.
+      --        State.Path := Id_List;
+      --        return;
+      --     elsif not Contains (State.Id_To_Next_Id,
+      --                         Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
+      --     then
+      --        -- Candidate successor can't be found.
+      --        -- There is no cycle. Set the path and return.
+      --        State.Path := Id_List;
+      --        return;
+      --     elsif Contains (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)))
+      --     then
+      --        -- There is a cycle.
+      --        -- Set the cycle id and path and return.
+      --        pragma Assert
+      --          (not (Element (State.Id_To_Next_Id, Last_Element (Id_List)) = 0 or else
+      --             Element (State.Id_To_Next_Id, Last_Element (Id_List)) =
+      --           Last_Element (Id_List) or else
+      --             not Contains (State.Id_To_Next_Id,
+      --                           Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))))
+      --        and then Contains (State.Id_To_Next_Id,
+      --                           Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))));
+      --        State.Cycle_Index := Find_Index (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
+      --        pragma Assert (State.Cycle_Index > 0);
+      --        -- State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
+      --        State.Path := Id_List;
+      --        return;
+      --     elsif Contains (State.Id_To_Next_Id, Pos64 (Successor (State.Id_To_Next_Id, Last_Element (Id_List))))
+      --     then
+      --        -- Found a successor that's not a cycle.
+      --        -- Append it to the list and continue.
+      --        declare
+      --           Current_Id : constant Pos64 := Last_Element (Id_List);
+      --           Succ : constant Pos64 :=
+      --             Successor (State.Id_To_Next_Id, Last_Element (Id_List)) with Ghost;
+      --        begin
+      --
+      --           Id_List_Tmp := Id_List;
+      --
+      --           pragma Assert
+      --             (for all I of Model (Id_List) => Contains (State.Id_To_Next_Id, I));
+      --
+      --           Append (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
+      --
+      --        end;
+      --     else
+      --        -- Should be unreachable.
+      --        -- Making all previous cases explicit seems to aid proof.
+      --        raise Program_Error;
+      --     end if;
+      --
+      --     pragma Loop_Invariant (not Is_Empty (Id_List));
+      --     pragma Loop_Invariant (Length (Model (Id_List)) >= 2);
+      --
+      --     pragma Loop_Invariant (State.Id_To_Next_Id = State'Loop_Entry.Id_To_Next_Id);
+      --     pragma Loop_Invariant (State.Id_To_Waypoint = State.Id_To_Waypoint'Loop_Entry);
+      --
+      --     --  pragma Loop_Invariant (Element (Model (Id_List), 1) = First_Id or else
+      --     --                         Element (Model (Id_List), 2) = First_Id);
+      --
+      --     pragma Loop_Invariant
+      --       (Element (Model (Id_List), State.Next_Segment_Index) = First_Id
+      --        or else
+      --        Successor (State.Id_To_Next_Id,
+      --          Element (Model (Id_List), State.Next_Segment_Index)) = First_Id);
+      --
+      --     pragma Loop_Invariant
+      --       (Waypoints_Are_Subset (MC.WaypointList, State.Id_To_Waypoint));
+      --
+      --     pragma Loop_Invariant
+      --       (for all Id of Model (Id_List) => Contains (State.Id_To_Next_Id, Id));
+      --
+      --     pragma Loop_Invariant
+      --       (for all I in First_Index (Id_List) .. Last_Index (Id_List) - 1 =>
+      --          Successor (State.Id_To_Next_Id, Element (Id_List, I)) =
+      --          Element (Id_List, I + 1));
+      --
+      --     pragma Loop_Invariant
+      --       (Elements_Are_Unique (Id_List));
+      --
+      --     pragma Loop_Invariant (State.Cycle_Index = 0);
+      --
+      --     pragma Loop_Invariant (State.MC = MC);
+      --  end loop;
+      --
+      --  State.Path := Id_List;
 
    end Handle_MissionCommand;
 
