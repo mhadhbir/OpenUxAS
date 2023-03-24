@@ -17,6 +17,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    --  use Pos64_Nat64_Maps.Formal_Model;
    --  use Pos64_Vectors.Formal_Model;
 
+   function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
+                       renames Element;
+
    --  function Same_Mappings
    --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
    --     N : Pos_WP_Maps_M.Map)
@@ -59,15 +62,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       null;
    end Lemma_First_Element_Unchanged_After_Append;
 
-   --  function Has_Same_Keys
-   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
-   --     N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
-   --  with
-   --    Ghost,
-   --    Global => null;
-   --  --  Annotate => (GNATprove, Inline_For_Proof);
-
-   function Has_Same_Keys
+   function Have_Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
    is
@@ -110,7 +105,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      Pre => Length (WaypointList) <= Max,
      Post =>
        Waypoints_Are_Subset (WaypointList, Id_To_Waypoint) and then
-       Has_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)) and then
+       Have_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)) and then
        Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
    procedure Extract_MissionCommand_Maps
@@ -119,7 +114,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Next_Id : in out Pos64_Nat64_Map)
    is
       WP : Waypoint;
-      Id_To_Next_Id_Tmp : Pos64_Nat64_Map with Ghost;
    begin
 
       Clear (Id_To_Next_Id);
@@ -128,12 +122,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       for I in WP_Sequences.First .. Last (WaypointList) loop
          WP := Get (WaypointList, I);
          if WP.Number > 0 and then WP.NextWaypoint >= 0 then
-            Id_To_Next_Id_Tmp := Id_To_Next_Id;
             if not Contains (Id_To_Waypoint, Pos64 (WP.Number)) and then
               not Contains (Id_To_Next_Id, Pos64 (WP.Number))
             then
                Insert (Id_To_Waypoint, Pos64 (WP.Number), WP);
-               pragma Assert (Id_To_Next_Id = Id_To_Next_Id_Tmp);
                Insert (Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
                pragma Assert
                  (Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
@@ -148,7 +140,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (Waypoints_Are_Subset (WaypointList, Id_To_Waypoint));
          pragma Loop_Invariant
-           (Has_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)));
+           (Have_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)));
          pragma Loop_Invariant
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
       end loop;
@@ -198,8 +190,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Next_Segment_Index : out Path_Index;
       Cycle_Index : out Path_Index)
    is
-      function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
-                          renames Element;
       Path_Tmp : Pos64_Vector with Ghost;
       use Pos64_Vectors.Formal_Model.M;
       use all type Pos64_Vectors.Formal_Model.M.Sequence;

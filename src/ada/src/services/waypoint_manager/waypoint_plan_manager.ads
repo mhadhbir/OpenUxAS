@@ -143,7 +143,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
    with Ghost, Global => null;
 
-   function Has_Same_Keys
+   function Have_Same_Keys
      (M : Pos64_WP_Maps.Formal_Model.M.Map;
       N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
      with Ghost, Global => null;
@@ -178,7 +178,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          --     Contains (Model (State.Id_To_Next_Id), Id)) and then
          --  (for all Id of Model (State.Id_To_Next_Id) =>
          --    Contains (Model (State.Id_To_Waypoint), Id)) and then
-         Has_Same_Keys (Model (State.Id_To_Waypoint),
+         Have_Same_Keys (Model (State.Id_To_Waypoint),
                         Model (State.Id_To_Next_Id)) and then
          Id_Keys_Match_Waypoint_Ids (State.Id_To_Next_Id, State.Id_To_Waypoint) and then
          --  (for all Id of Model (State.Id_To_Next_Id) =>
