@@ -186,7 +186,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Contains (Path, Element (Id_To_Next_Id, Last_Element (Path))) and then
               Element (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
             then
-              Cycle_Index > 0
+              Cycle_Index > 0 and
+              Element (Path, Cycle_Index) = Element (Id_To_Next_Id, Last_Element (Path))
             else
               Cycle_Index = 0);
 
@@ -248,6 +249,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                  Find_Index (Path,
                              Successor (Id_To_Next_Id, Last_Element (Path)));
                pragma Assert (Cycle_Index > 0);
+               pragma Assert (Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
                return;
             else
                declare
