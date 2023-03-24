@@ -153,6 +153,155 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
    end Extract_MissionCommand_Maps;
 
+   --------------------
+   -- Construct_Path --
+   --------------------
+
+   procedure Construct_Path
+     (First_Id : Pos64;
+      Id_To_Next_Id : Pos64_Nat64_Map;
+      Path : in out Pos64_Vector;
+      Next_Segment_Index : out Path_Index;
+      Cycle_Index : out Path_Index)
+     with
+       Pre =>
+         Is_Empty (Path) and then
+         not Is_Empty (Id_To_Next_Id) and then
+         Contains (Id_To_Next_Id, First_Id),
+         Post =>
+           (Element (Model (Path), Next_Segment_Index) = First_Id or else
+              Element (Id_To_Next_Id, Element (Model (Path),
+                Next_Segment_Index)) = First_Id) and then
+           (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
+           Elements_Are_Unique (Path) and then
+           (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
+            Element (Id_To_Next_Id, Element (Path, I)) =
+                Element (Path, I + 1)) and then
+           (if Element (Id_To_Next_Id, Last_Element (Path)) = 0 or else
+              not Contains (Path, Pos64 (Element (Id_To_Next_Id, Last_Element (Path)))) or else
+                Element (Id_To_Next_Id, Last_Element (Path)) = Last_Element (Path)
+            then
+                Cycle_Index = 0
+            else
+              (if Contains (Path, Element (Id_To_Next_Id, Last_Element (Path)))
+                 then
+                   Cycle_Index > 0
+                     else
+                       Cycle_Index = 0));
+
+   procedure Construct_Path
+     (First_Id : Pos64;
+      Id_To_Next_Id : Pos64_Nat64_Map;
+      Path : in out Pos64_Vector;
+      Next_Segment_Index : out Path_Index;
+      Cycle_Index : out Path_Index)
+   is
+      function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
+                          renames Element;
+      Path_Tmp : Pos64_Vector with Ghost;
+      use Pos64_Vectors.Formal_Model.M;
+      use all type Pos64_Vectors.Formal_Model.M.Sequence;
+   begin
+
+      Next_Segment_Index := 1;
+      Cycle_Index := 0;
+
+      -- Append predecessor to First_Id to the list if found
+      for Id of Id_To_Next_Id loop
+         pragma Loop_Invariant (Is_Empty (Path));
+         if not (Id = First_Id) and then
+           Successor (Id_To_Next_Id, Id) = First_Id
+         then
+            Append (Path, Id);
+            exit;
+         end if;
+      end loop;
+
+      -- Append First_Id to the list
+      Append (Path, First_Id);
+
+      pragma Assert (not Is_Empty (Path));
+      pragma Assert (Length (Path) <= 2);
+      pragma Assert (Elements_Are_Unique (Path));
+      pragma Assert
+        (Element (Model (Path), Next_Segment_Index) = First_Id or else
+         Successor (Id_To_Next_Id,
+                    Element (Model (Path), Next_Segment_Index)) = First_Id);
+      pragma Assert
+        (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
+      pragma Assert
+        (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
+             Successor (Id_To_Next_Id, Element (Model (Path), I)) =
+             Element (Model (Path), I + 1));
+
+      while Length (Path) < Length (Id_To_Next_Id) loop
+
+         if Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
+            not Contains (Path, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
+           Successor (Id_To_Next_Id, Last_Element (Path)) = Last_Element (Path)
+         then
+            return;
+         else
+            if Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) then
+               Cycle_Index :=
+                 Find_Index (Path,
+                             Successor (Id_To_Next_Id, Last_Element (Path)));
+               pragma Assert (Cycle_Index > 0);
+               return;
+            else
+               declare
+                  Current_Id : constant Pos64 := Last_Element (Path);
+                  Succ : constant Pos64 :=
+                    Successor (Id_To_Next_Id, Last_Element (Path)) with Ghost;
+               begin
+                  Path_Tmp := Path;
+                  pragma Assert
+                    (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
+                  Append (Path, Successor (Id_To_Next_Id, Last_Element (Path)));
+               end;
+            end if;
+         end if;
+
+         pragma Loop_Invariant (not Is_Empty (Path));
+         pragma Loop_Invariant (Length (Model (Path)) >= 2);
+
+         pragma Loop_Invariant
+           (Element (Model (Path), Next_Segment_Index) = First_Id
+            or else
+            Successor (Id_To_Next_Id,
+              Element (Model (Path), Next_Segment_Index)) = First_Id);
+
+         pragma Loop_Invariant
+           (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
+
+         pragma Loop_Invariant
+           (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
+              Successor (Id_To_Next_Id, Element (Path, I)) =
+              Element (Path, I + 1));
+
+         pragma Loop_Invariant
+           (Elements_Are_Unique (Path));
+
+         pragma Loop_Invariant (Cycle_Index = 0);
+
+      end loop;
+
+      if Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
+        not Contains (Path, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
+        Successor (Id_To_Next_Id, Last_Element (Path)) = Last_Element (Path)
+      then
+         null;
+      else
+         if Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) then
+            Cycle_Index :=
+              Find_Index (Path,
+                          Successor (Id_To_Next_Id, Last_Element (Path)));
+            pragma Assert (Cycle_Index > 0);
+         end if;
+      end if;
+
+   end Construct_Path;
+
    ---------------------------
    -- Handle_MissionCommand --
    ---------------------------
@@ -250,6 +399,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          then
             -- There is a cycle.
             -- Set the cycle id and path and return.
+            pragma Assert
+              (not (Element (State.Id_To_Next_Id, Last_Element (Id_List)) = 0 or else
+                 Element (State.Id_To_Next_Id, Last_Element (Id_List)) =
+               Last_Element (Id_List) or else
+                 not Contains (State.Id_To_Next_Id,
+                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))))
+            and then Contains (State.Id_To_Next_Id,
+                               Pos64 (Element (State.Id_To_Next_Id, Last_Element (Id_List)))));
             State.Cycle_Index := Find_Index (Id_List, Successor (State.Id_To_Next_Id, Last_Element (Id_List)));
             pragma Assert (State.Cycle_Index > 0);
             -- State.Cycle_Id := Successor (State.Id_To_Next_Id, Last_Element (Id_List));
@@ -309,6 +466,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Elements_Are_Unique (Id_List));
 
          pragma Loop_Invariant (State.Cycle_Index = 0);
+
+         pragma Loop_Invariant (State.MC = MC);
       end loop;
 
       State.Path := Id_List;
