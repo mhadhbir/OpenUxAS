@@ -383,16 +383,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (Path : Sequence;
       Cycle_Index : Positive;
       Path_Index : Positive;
-      Segment : Sequence) return Boolean with
-     Ghost,
-     Pre =>
-       Last (Path) <= Integer (Max) and Cycle_Index in 1 .. Last (Path) - 1 and
-       Path_Index in 1 .. Last (Path) and Last (Segment) <= Integer (Max);
-
-   function Is_Subsegment
-     (Path : Sequence;
-      Cycle_Index : Positive;
-      Path_Index : Positive;
       Segment : Sequence) return Boolean is
      (for all I in 1 .. Last (Segment) =>
           (if Path_Index + I - 1 <= Last (Path)
@@ -432,7 +422,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          Desired_Segment_Length <= Positive (Max),
        Post =>
          Element (Model (Segment), 1) = Element (Model (Path), Path_Index) and then
-         (for all Id of Segment =>
+         (for all Id of Model (Segment) =>
             Contains (Model (Path), 1, Last (Model (Path)), Id)) and then
          (if Cycle_Index > 0 then
             Positive (Length (Segment)) = Desired_Segment_Length and then
@@ -441,13 +431,18 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             Element (Model (Segment), Last (Model (Segment)) - Overlap + 1) =
               Element (Model (Path), New_Path_Index)
           else
-            (for all I in 0 .. Integer (Length (Segment)) - 1 =>
-               Element (Model (Segment), 1 + I) = Element (Model (Path), Path_Index + I)) and then
             (for all I in 1 .. Integer (Length (Segment)) =>
                Element (Model (Segment), I) = Element (Model (Path), Path_Index + I - 1)) and then
-            (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length then
-               Positive (Length (Segment)) = Desired_Segment_Length
-             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index + 1));
+            (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
+             then
+               Positive (Length (Segment)) = Desired_Segment_Length and then
+               (if Last_Index (Path) = Last_Index (Segment)
+                then New_Path_Index = 0
+                else
+                  New_Path_Index = Path_Index + Desired_Segment_Length - Overlap and then
+                    (Element (Model (Segment), Last (Model (Segment)) - Overlap + 1) =
+                         Element (Model (Path), New_Path_Index)))
+             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index + 1 and then New_Path_Index = 0));
 
    procedure Initialize_Segment
      (Path : Pos64_Vector;
@@ -528,7 +523,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                    Element (Model (Segment), I) = Element (Model (Path), Path_Index + I - 1));
          end loop;
          if Len = Desired_Segment_Length and then
-           Last_Index (Path) /= Last_Index (Segment) then
+           Last_Index (Path) /= Last_Index (Segment)
+         then
             New_Path_Index := Path_Index + Len - Overlap;
             pragma Assert
               (Element (Model (Segment), Last (Model (Segment)) - Overlap + 1) =
@@ -551,7 +547,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    is
       Len : constant Positive := Positive (Config.NumberWaypointsToServe);
       Overlap : constant Positive := Positive (Config.NumberWaypointsOverlap);
-      New_Path_Index : Positive;
+      New_Path_Index : Natural;
 
       use Pos64_Vectors.Formal_Model;
       use Pos64_Vectors.Formal_Model.M;
@@ -568,41 +564,42 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           State.Segment,
                           New_Path_Index);
 
-      if State.Cycle_Index > 0 then
-         declare
-            Next_Segment_Id : Pos64;
-         begin
-            Next_Segment_Id :=
-              Element (State.Segment,
-                       Integer (Length (State.Segment)) - Overlap + 1);
-            State.Next_Segment_Index :=
-              Find_Index (State.Path, Next_Segment_Id);
-         end;
-         pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
-      else
-         if Positive (Length (State.Segment)) = Len and then
-           -- why not just check that next_segment_index + len - 1 isn't last index of path
-           Element (State.Segment, Last_Index (State.Segment)) /=
-             Element (State.Path, Last_Index (State.Path))
-         then
-            declare
-               Next_Segment_Id : Pos64;
-            begin
-               Next_Segment_Id :=
-                 Element (State.Segment,
-                          Integer (Length (State.Segment)) - Overlap + 1);
-               -- Can we assert Next_Segment_Id is not Last_Index in Path?
-               -- Then we can say Next_First_Id is successor
-               State.Next_Segment_Index :=
-                 Find_Index (State.Path, Next_Segment_Id);
-            end;
-            pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
-         else
-            State.Next_Segment_Index := 0;
-         end if;
-      end if;
+      --  if State.Cycle_Index > 0 then
+      --     declare
+      --        Next_Segment_Id : Pos64;
+      --     begin
+      --        Next_Segment_Id :=
+      --          Element (State.Segment,
+      --                   Integer (Length (State.Segment)) - Overlap + 1);
+      --        State.Next_Segment_Index :=
+      --          Find_Index (State.Path, Next_Segment_Id);
+      --     end;
+      --     pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
+      --  else
+      --     if Positive (Length (State.Segment)) = Len and then
+      --       -- why not just check that next_segment_index + len - 1 isn't last index of path
+      --       Element (State.Segment, Last_Index (State.Segment)) /=
+      --         Element (State.Path, Last_Index (State.Path))
+      --     then
+      --        declare
+      --           Next_Segment_Id : Pos64;
+      --        begin
+      --           Next_Segment_Id :=
+      --             Element (State.Segment,
+      --                      Integer (Length (State.Segment)) - Overlap + 1);
+      --           -- Can we assert Next_Segment_Id is not Last_Index in Path?
+      --           -- Then we can say Next_First_Id is successor
+      --           State.Next_Segment_Index :=
+      --             Find_Index (State.Path, Next_Segment_Id);
+      --        end;
+      --        pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
+      --     else
+      --        State.Next_Segment_Index := 0;
+      --     end if;
+      --  end if;
 
       State.New_Command := False;
+      State.Next_Segment_Index := New_Path_Index;
 
       --  declare
       --     MC_Out : MissionCommand := State.MC;

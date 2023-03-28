@@ -162,6 +162,18 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
      with Ghost, Global => null;
 
+   function Is_Subsegment
+     (Path : Pos_Vec_M.Sequence;
+      Cycle_Index : Positive;
+      Path_Index : Positive;
+      Segment : Pos_Vec_M.Sequence) return Boolean with
+     Ghost,
+     Pre =>
+       Pos_Vec_M.Last (Path) <= Integer (Max) and
+       Cycle_Index in 1 .. Pos_Vec_M.Last (Path) - 1 and
+       Path_Index in 1 .. Pos_Vec_M.Last (Path) and
+       Pos_Vec_M.Last (Segment) <= Integer (Max);
+
    --  function Is_Successor
    --    (Path : Pos64_Vector;
    --     E1, E2 : Pos64) return Boolean
@@ -231,10 +243,13 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Config.NumberWaypointsToServe > Config.NumberWaypointsOverlap and then
          Config.NumberWaypointsToServe <= UInt32 (Max) and then
          Length (State.Path) > 0 and then
+         Last_Index (State.Path) <= Positive (Max) and then
          Elements_Are_Unique (State.Path) and then
-         Iter_Has_Element (State.Path, State.Next_Segment_Index) and then
-         (if State.Cycle_Index > 0 then
-            Iter_Has_Element (State.Path, State.Cycle_Index)) and then
+         State.Next_Segment_Index in 1 .. Last_Index (State.Path) and then
+         State.Cycle_Index in 0 .. Last_Index (State.Path) - 1 and then
+         -- Iter_Has_Element (State.Path, State.Next_Segment_Index) and then
+         --  (if State.Cycle_Index > 0 then
+         --     Iter_Has_Element (State.Path, State.Cycle_Index)) and then
          (if State.New_Command
           then
             State.Next_Segment_Index = 1 and then
@@ -269,37 +284,22 @@ package Waypoint_Plan_Manager with SPARK_Mode is
            State'Old.Cycle_Index = State.Cycle_Index and then
            State'Old.Headed_To_First_Id = State.Headed_To_First_Id and then
            State.New_Command = False and then
-           Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Segment_Index) and then
-           (for all Id of State.Segment => Contains (State.Path, Id)) and then
-           (if State.Cycle_Index > 0
-            then
-              (Integer (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
-               and then
-               (Element (State.Path, State.Next_Segment_Index) =
-                  Element (State.Segment,
-                           Integer (Length (State.Segment)) -
-                             Integer (Config.NumberWaypointsOverlap) + 1)))
+           Element (Model (State.Segment), 1) =
+             Element (Model (State.Path), State'Old.Next_Segment_Index) and then
+           (for all Id of Model (State.Segment) => Pos_Vec_M.Contains (Model (State.Path), 1, Pos_Vec_M.Last (Model (State.Path)), Id)) and then
+           (if State.Cycle_Index > 0 then
+              Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
+              Is_Subsegment (Model (State.Path), State.Cycle_Index, State.Next_Segment_Index'Old, Model (State.Segment)) and then
+              State.Next_Segment_Index in 1 .. Pos_Vec_M.Last (Model (State.Path)) and then
+              Element (Model (State.Segment), Pos_Vec_M.Last (Model (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1) =
+              Element (Model (State.Path), State.Next_Segment_Index)
             else
-              (if Positive (Length (State.Path)) - State'Old.Next_Segment_Index + 1 >=
-                 Integer (Config.NumberWaypointsToServe)
-               then
-                 (Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
-                  and then
-                    (if Element (State.Segment, Last_Index (State.Segment)) /=
-                         Element (State.Path, Last_Index (State.Path))
-                     then
-                         Element (State.Path, State.Next_Segment_Index) =
-                          Element (State.Segment,
-                                   Integer (Length (State.Segment)) -
-                                     Integer (Config.NumberWaypointsOverlap) + 1)
-                     -- Can we say there's > Overlap elements left, and
-                     -- Next First Id is successor?
-                      else
-                         State.Next_Segment_Index = 0))
-                 else
-                 (Positive (Length (State.Segment)) =
-                      Positive (Length (State.Path)) - State'Old.Next_Segment_Index + 1 and then
-                    State.Next_Segment_Index = 0)));
+              (for all I in 1 .. Integer (Pos_Vec_M.Length (Model (State.Segment))) =>
+                 Element (Model (State.Segment), I) = Element (Model (State.Path), State.Next_Segment_Index'Old + I - 1)) and then
+              (if Positive (Pos_Vec_M.Length (Model (State.Path))) - State.Next_Segment_Index'Old + 1 >= Integer (Config.NumberWaypointsToServe) then
+                 Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
+               else Positive (Length (State.Segment)) = Positive (Length (State.Path)) - State.Next_Segment_Index'Old + 1));
+
 
 private
 
