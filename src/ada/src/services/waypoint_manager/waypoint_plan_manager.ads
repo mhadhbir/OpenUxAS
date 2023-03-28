@@ -295,11 +295,20 @@ package Waypoint_Plan_Manager with SPARK_Mode is
               Element (Model (State.Path), State.Next_Segment_Index)
             else
               (for all I in 1 .. Integer (Pos_Vec_M.Length (Model (State.Segment))) =>
-                 Element (Model (State.Segment), I) = Element (Model (State.Path), State.Next_Segment_Index'Old + I - 1)) and then
-              (if Positive (Pos_Vec_M.Length (Model (State.Path))) - State.Next_Segment_Index'Old + 1 >= Integer (Config.NumberWaypointsToServe) then
-                 Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe)
-               else Positive (Length (State.Segment)) = Positive (Length (State.Path)) - State.Next_Segment_Index'Old + 1));
-
+               Element (Model (State.Segment), I) = Element (Model (State.Path), State.Next_Segment_Index'Old + I - 1)) and then
+              (if Positive (Pos_Vec_M.Length (Model (State.Path))) - State.Next_Segment_Index'Old + 1 >= Integer (Config.NumberWaypointsToServe)
+               then
+                 Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
+                 (if Last_Index (State.Path) = Last_Index (State.Segment)
+                  then
+                    State.Next_Segment_Index = 0
+                  else
+                    State.Next_Segment_Index = State.Next_Segment_Index'Old + Integer (Config.NumberWaypointsToServe) - Integer (Config.NumberWaypointsOverlap) and then
+                    (Element (Model (State.Segment), Pos_Vec_M.Last (Model (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1) =
+                       Element (Model (State.Path), State.Next_Segment_Index)))
+                else
+                  Positive (Length (State.Segment)) = Positive (Length (State.Path)) - State.Next_Segment_Index'Old + 1 and then
+                  State.Next_Segment_Index = 0));
 
 private
 

@@ -95,12 +95,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Element (Model (Id_To_Next_Id), Id) =
            Element (Model (Id_To_Waypoint), Id).NextWaypoint);
 
-   --  function Is_Successor
-   --    (Path : Pos64_Vector;
-   --     E1, E2 : Pos64) return Boolean
-   --  is
-   --    (Find_Index (Path, E1)
-
    ---------------------------------
    -- Extract_MissionCommand_Maps --
    ---------------------------------
@@ -177,9 +171,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          (Element (Model (Path), Next_Segment_Index) = First_Id or else
             (Length (Path) > 1 and then
                Element (Model (Path), 2) = First_Id)) and then
-            --  Successor
-            --    (Id_To_Next_Id,
-            --     Element (Model (Path), Next_Segment_Index)) = First_Id) and then
          (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
          Elements_Are_Unique (Path) and then
          (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
@@ -227,10 +218,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       pragma Assert (not Is_Empty (Path));
       pragma Assert (Length (Path) <= 2);
       pragma Assert (Elements_Are_Unique (Path));
-      --  pragma Assert
-      --    (Element (Model (Path), Next_Segment_Index) = First_Id or else
-      --     Successor (Id_To_Next_Id,
-      --                Element (Model (Path), Next_Segment_Index)) = First_Id);
       pragma Assert
         (Element (Model (Path), Next_Segment_Index) = First_Id or else
             (Length (Path) > 1 and then
@@ -278,12 +265,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
          pragma Loop_Invariant (not Is_Empty (Path));
          pragma Loop_Invariant (Length (Model (Path)) >= 2);
-
-         --  pragma Loop_Invariant
-         --    (Element (Model (Path), Next_Segment_Index) = First_Id
-         --     or else
-         --     Successor (Id_To_Next_Id,
-         --       Element (Model (Path), Next_Segment_Index)) = First_Id);
 
          pragma Loop_Invariant
            (Element (Model (Path), Next_Segment_Index) = First_Id or else
@@ -363,10 +344,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                       State.Cycle_Index);
 
       State.Next_First_Id := First_Id;
-
-      --  pragma Assert (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
-      --                 Element (State.Id_To_Next_Id, Element (Model (State.Path),
-      --                   State.Next_Segment_Index)) = First_Id);
 
       pragma Assert
         (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
@@ -563,40 +540,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           Overlap,
                           State.Segment,
                           New_Path_Index);
-
-      --  if State.Cycle_Index > 0 then
-      --     declare
-      --        Next_Segment_Id : Pos64;
-      --     begin
-      --        Next_Segment_Id :=
-      --          Element (State.Segment,
-      --                   Integer (Length (State.Segment)) - Overlap + 1);
-      --        State.Next_Segment_Index :=
-      --          Find_Index (State.Path, Next_Segment_Id);
-      --     end;
-      --     pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
-      --  else
-      --     if Positive (Length (State.Segment)) = Len and then
-      --       -- why not just check that next_segment_index + len - 1 isn't last index of path
-      --       Element (State.Segment, Last_Index (State.Segment)) /=
-      --         Element (State.Path, Last_Index (State.Path))
-      --     then
-      --        declare
-      --           Next_Segment_Id : Pos64;
-      --        begin
-      --           Next_Segment_Id :=
-      --             Element (State.Segment,
-      --                      Integer (Length (State.Segment)) - Overlap + 1);
-      --           -- Can we assert Next_Segment_Id is not Last_Index in Path?
-      --           -- Then we can say Next_First_Id is successor
-      --           State.Next_Segment_Index :=
-      --             Find_Index (State.Path, Next_Segment_Id);
-      --        end;
-      --        pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
-      --     else
-      --        State.Next_Segment_Index := 0;
-      --     end if;
-      --  end if;
 
       State.New_Command := False;
       State.Next_Segment_Index := New_Path_Index;
