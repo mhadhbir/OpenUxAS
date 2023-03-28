@@ -17,8 +17,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    --  use Pos64_Nat64_Maps.Formal_Model;
    --  use Pos64_Vectors.Formal_Model;
 
-   function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
-                       renames Element;
+   use Pos64_Vectors.Formal_Model.M;
+
+   --  function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
+   --                      renames Element;
 
    --  function Same_Mappings
    --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
@@ -93,6 +95,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Element (Model (Id_To_Next_Id), Id) =
            Element (Model (Id_To_Waypoint), Id).NextWaypoint);
 
+   --  function Is_Successor
+   --    (Path : Pos64_Vector;
+   --     E1, E2 : Pos64) return Boolean
+   --  is
+   --    (Find_Index (Path, E1)
+
    ---------------------------------
    -- Extract_MissionCommand_Maps --
    ---------------------------------
@@ -162,26 +170,30 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          Is_Empty (Path) and then
          not Is_Empty (Id_To_Next_Id) and then
          Contains (Id_To_Next_Id, First_Id),
-         Post =>
-           Next_Segment_Index > 0 and then
-           not Is_Empty (Path) and then
-           Iter_Has_Element (Path, Next_Segment_Index) and then
-           (Element (Model (Path), Next_Segment_Index) = First_Id or else
-              Element (Id_To_Next_Id, Element (Model (Path),
-                Next_Segment_Index)) = First_Id) and then
-           (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
-           Elements_Are_Unique (Path) and then
-           (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
-            Element (Id_To_Next_Id, Element (Path, I)) =
-                Element (Path, I + 1)) and then
-           (if Element (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
-              Contains (Path, Element (Id_To_Next_Id, Last_Element (Path))) and then
-              Element (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
-            then
-              Cycle_Index > 0 and
-              Element (Path, Cycle_Index) = Element (Id_To_Next_Id, Last_Element (Path))
-            else
-              Cycle_Index = 0);
+       Post =>
+         Next_Segment_Index > 0 and then
+         not Is_Empty (Path) and then
+         Iter_Has_Element (Path, Next_Segment_Index) and then
+         (Element (Model (Path), Next_Segment_Index) = First_Id or else
+            (Length (Path) > 1 and then
+               Element (Model (Path), 2) = First_Id)) and then
+            --  Successor
+            --    (Id_To_Next_Id,
+            --     Element (Model (Path), Next_Segment_Index)) = First_Id) and then
+         (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
+         Elements_Are_Unique (Path) and then
+         (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
+          Element (Id_To_Next_Id, Element (Path, I)) =
+              Element (Path, I + 1)) and then
+         (if Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
+            Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
+            Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
+          then
+            Cycle_Index > 0 and then
+            Iter_Has_Element (Path, Cycle_Index) and then
+            Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path))
+          else
+            Cycle_Index = 0);
 
    procedure Construct_Path
      (First_Id : Pos64;
@@ -215,10 +227,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       pragma Assert (not Is_Empty (Path));
       pragma Assert (Length (Path) <= 2);
       pragma Assert (Elements_Are_Unique (Path));
+      --  pragma Assert
+      --    (Element (Model (Path), Next_Segment_Index) = First_Id or else
+      --     Successor (Id_To_Next_Id,
+      --                Element (Model (Path), Next_Segment_Index)) = First_Id);
       pragma Assert
         (Element (Model (Path), Next_Segment_Index) = First_Id or else
-         Successor (Id_To_Next_Id,
-                    Element (Model (Path), Next_Segment_Index)) = First_Id);
+            (Length (Path) > 1 and then
+               Element (Model (Path), 2) = First_Id));
       pragma Assert
         (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
       pragma Assert
@@ -235,6 +251,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             Cycle_Index :=
               Find_Index (Path,
                           Successor (Id_To_Next_Id, Last_Element (Path)));
+            pragma Assert
+              (Cycle_Index > 0 and then
+               Iter_Has_Element (Path, Cycle_Index) and then
+               Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
             return;
          elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
            not Contains (Id_To_Next_Id, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
@@ -259,11 +279,16 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant (not Is_Empty (Path));
          pragma Loop_Invariant (Length (Model (Path)) >= 2);
 
+         --  pragma Loop_Invariant
+         --    (Element (Model (Path), Next_Segment_Index) = First_Id
+         --     or else
+         --     Successor (Id_To_Next_Id,
+         --       Element (Model (Path), Next_Segment_Index)) = First_Id);
+
          pragma Loop_Invariant
-           (Element (Model (Path), Next_Segment_Index) = First_Id
-            or else
-            Successor (Id_To_Next_Id,
-              Element (Model (Path), Next_Segment_Index)) = First_Id);
+           (Element (Model (Path), Next_Segment_Index) = First_Id or else
+              (Length (Path) > 1 and then
+               Element (Model (Path), 2) = First_Id));
 
          pragma Loop_Invariant
            (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
@@ -287,6 +312,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          Cycle_Index :=
            Find_Index (Path,
                        Successor (Id_To_Next_Id, Last_Element (Path)));
+         pragma Assert
+              (Cycle_Index > 0 and then
+               Iter_Has_Element (Path, Cycle_Index) and then
+               Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
       end if;
 
    end Construct_Path;
@@ -321,6 +350,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       -- Check whether First_Id can be found. If not, return.
       if not Contains (State.Id_To_Next_Id, First_Id) then
+         State.Next_First_Id := 0;
          return;
       end if;
 
@@ -330,105 +360,143 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                       State.Next_Segment_Index,
                       State.Cycle_Index);
 
-      pragma Assert (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
-                     Element (State.Id_To_Next_Id, Element (Model (State.Path),
-                       State.Next_Segment_Index)) = First_Id);
+      State.Next_First_Id := First_Id;
+
+      --  pragma Assert (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
+      --                 Element (State.Id_To_Next_Id, Element (Model (State.Path),
+      --                   State.Next_Segment_Index)) = First_Id);
+
+      pragma Assert
+        (Element (Model (State.Path), State.Next_Segment_Index) = First_Id or else
+            (Length (State.Path) > 1 and then
+               Element (Model (State.Path), 2) = First_Id));
 
    end Handle_MissionCommand;
 
-   ---------------------
-   -- Produce_Segment --
-   ---------------------
+   ------------------------
+   -- Initialize_Segment --
+   ------------------------
+
+   function Is_Subsegment
+     (Path : Sequence;
+      Cycle_Index : Positive;
+      Path_Index : Positive;
+      Segment : Sequence) return Boolean with
+     Ghost,
+     Pre =>
+       Last (Path) <= Integer (Max) and Cycle_Index in 1 .. Last (Path) - 1 and
+       Path_Index in 1 .. Last (Path) and Last (Segment) <= Integer (Max);
+
+   function Is_Subsegment
+     (Path : Sequence;
+      Cycle_Index : Positive;
+      Path_Index : Positive;
+      Segment : Sequence) return Boolean is
+     (for all I in 1 .. Last (Segment) =>
+          (if Path_Index + I - 1 <= Last (Path)
+           then
+              Get (Segment, I) = Get (Path, I + Path_Index - 1)
+           else
+              Get (Segment, I) =
+                 Get (Path, (Path_Index + I - 1 - Last (Path) - 1) mod
+                            (Last (Path) - Cycle_Index + 1) + Cycle_Index)));
+
+   procedure Lemma_Mod_Incr (A : Natural; B : Positive) with
+     Ghost,
+     Pre => A < Integer'Last,
+     Post =>
+       (if A mod B = B - 1 then (A + 1) mod B = 0
+          else (A + 1) mod B = A mod B + 1);
+
+   procedure Lemma_Mod_Incr (A : Natural; B : Positive) is null;
 
    procedure Initialize_Segment
      (Path : Pos64_Vector;
-      Desired_Segment_Length : Positive;
       Cycle_Index : Natural;
-      Path_Index : in out Positive;
+      Path_Index : Positive;
+      Desired_Segment_Length : Positive;
       Segment : in out Pos64_Vector)
      with
        Pre =>
          Is_Empty (Segment) and then
          Length (Path) > 0 and then
-         Iter_Has_Element (Path, Path_Index) and then
-         (if Cycle_Index > 0 then Iter_Has_Element (Path, Cycle_Index)) and then
+         Last_Index (Path) <= Positive (Max) and then
+         Path_Index in 1 .. Last_Index (Path) and then
+         Cycle_Index in 0 .. Last_Index (Path) - 1 and then
          Desired_Segment_Length <= Positive (Max),
        Post =>
-         Element (Segment, 1) = Element (Path, Path_Index'Old) and then
-         (for all Id of Segment => Contains (Path, Id)) and then
+         Element (Model (Segment), 1) = Element (Model (Path), Path_Index) and then
+         (for all Id of Segment => Contains (Model (Path), 1, Last (Model (Path)), Id)) and then
          (if Cycle_Index > 0
-          then Positive (Length (Segment)) = Desired_Segment_Length --) and then
-         --(if Cycle_Index = 0
-          --then
+          then Positive (Length (Segment)) = Desired_Segment_Length
           else
-            (if Positive (Length (Path)) - Path_Index'Old + 1 >= Desired_Segment_Length
+            (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
              then Positive (Length (Segment)) = Desired_Segment_Length
-             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index'Old + 1));
+             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index + 1));
 
    procedure Initialize_Segment
      (Path : Pos64_Vector;
-      Desired_Segment_Length : Positive;
       Cycle_Index : Natural;
-      Path_Index : in out Positive;
+      Path_Index : Positive;
+      Desired_Segment_Length : Positive;
       Segment : in out Pos64_Vector)
    is
       Len : Positive;
-      Initial_Path_Index : constant Positive := Path_Index with Ghost;
-      Segment_Tmp : Pos64_Vector with Ghost;
-
+      PI : Positive := Path_Index;
       use Pos64_Vectors.Formal_Model;
       use Pos64_Vectors.Formal_Model.M;
    begin
 
-      if Cycle_Index > 0 then
+      if Cycle_Index in 1 .. Last_Index (Path) - 1 then
          Len := Desired_Segment_Length;
-         for I in 1 .. Len loop
-            if not Iter_Has_Element (Path, Path_Index) then
-               Path_Index := Cycle_Index;
-            end if;
-            Append (Segment, Element (Path, Path_Index));
-            Path_Index := Path_Index + 1;
+         for SI in 1 .. Len loop
+            pragma Loop_Invariant
+              (PI =
+                 (if Path_Index + SI - 1 <= Last_Index (Path)
+                  then Path_Index + SI - 1
+                  else (Path_Index + SI - 1 - Last_Index (Path) - 1) mod
+                    (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index));
+            pragma Loop_Invariant
+              (Is_Subsegment (Model (Path), Cycle_Index,
+                              Path_Index, Model (Segment)));
+            pragma Loop_Invariant
+              (for all Id of Model (Segment) =>
+                   Contains (Model (Path), 1, Last (Model (Path)), Id));
+            pragma Loop_Invariant (Last_Index (Segment) = SI - 1);
 
-            -- Path_Index = Initial_Path_Index + I - 1
-            --  pragma Loop_Invariant
-            --    (if Initial_Path_Index + I - 1 < Last_Index (Path)
-            --     then
-            --        Path_Index = Initial_Path_Index + I - 1
-            --     else
-            --        Path_Index =
-            --       ((Initial_Path_Index + I - 1 - Integer (Length (Path))) mod (Integer (Length (Path)) - Cycle_Index + 1)) + Cycle_Index - 1);
-            pragma Loop_Invariant
-              (Element (Model (Segment), 1) =
-                 Element (Model (Path), Initial_Path_Index));
-            pragma Loop_Invariant (Integer (Length (Segment)) = I);
-            pragma Loop_Invariant
-              (for all Id of Segment => Contains (Path, Id));
+            Append (Segment, Element (Path, PI));
+            if Path_Index + SI - 1 > Last_Index (Path) then
+               Lemma_Mod_Incr (Path_Index + SI - 1 - Last_Index (Path) - 1,
+                               Last_Index (Path) - Cycle_Index + 1);
+            end if;
+            if PI = Last_Index (Path) then
+               PI := Cycle_Index;
+            else
+               PI := PI + 1;
+            end if;
          end loop;
       else
          Len := (if Integer (Length (Path)) - Path_Index + 1 >=
                    Desired_Segment_Length
                  then Desired_Segment_Length
                  else Integer (Length (Path)) - Path_Index + 1);
-         Append (Segment, Element (Path, Path_Index));
-         Path_Index := Path_Index + 1;
-         for I in 2 .. Len loop
+         for I in 1 .. Len loop
             Append (Segment, Element (Path, Path_Index));
-            Path_Index := Path_Index + 1;
-            pragma Loop_Invariant (Path_Index = Initial_Path_Index + I);
+            PI := PI + 1;
+            pragma Loop_Invariant (PI = Path_Index + I);
             pragma Loop_Invariant (Integer (Length (Segment)) = I);
-            pragma Loop_Invariant (Element (Segment, 1) = Element (Path, Initial_Path_Index));
+            pragma Loop_Invariant (Element (Model (Segment), 1) = Element (Model (Path), Path_Index));
             pragma Loop_Invariant
-              (for all J in 2 .. I =>
-                 (Element (Segment, J - 1) =
-                      Element (Path, Initial_Path_Index + J - 2) and then
-                  Element (Segment, J) =
-                      Element (Path, Initial_Path_Index + J - 1)));
-            pragma Loop_Invariant
-              (for all Id of Segment => Contains (Path, Id));
+              (for all Id of Model (Segment) =>
+                   Contains (Model (Path), 1, Last (Model (Path)), Id));
          end loop;
       end if;
 
    end Initialize_Segment;
+
+   ---------------------
+   -- Produce_Segment --
+   ---------------------
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
@@ -464,6 +532,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Assert (Iter_Has_Element (State.Path, State.Next_Segment_Index));
       else
          if Positive (Length (State.Segment)) = Len and then
+           -- why not just check that next_segment_index + len - 1 isn't last index of path
            Element (State.Segment, Last_Index (State.Segment)) /=
              Element (State.Path, Last_Index (State.Path))
          then
@@ -472,7 +541,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             begin
                Next_Segment_Id :=
                  Element (State.Segment,
-                       Integer (Length (State.Segment)) - Overlap + 1);
+                          Integer (Length (State.Segment)) - Overlap + 1);
+               -- Can we assert Next_Segment_Id is not Last_Index in Path?
+               -- Then we can say Next_First_Id is successor
                State.Next_Segment_Index :=
                  Find_Index (State.Path, Next_Segment_Id);
             end;
