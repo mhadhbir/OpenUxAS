@@ -23,7 +23,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    package Pos64_WP_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
    use Pos64_WP_Maps;
    package Pos_WP_Maps_P renames Pos64_WP_Maps.Formal_Model.P;
-   package Pos_WP_Maps_K renames Pos64_WP_Maps.Formal_Model.K;
    package Pos_WP_Maps_M is new SPARK.Containers.Functional.Maps (Pos64, Waypoint);
    subtype Pos64_WP_Map is Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
      with Predicate =>
@@ -34,7 +33,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    package Pos64_Nat64_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
    package Pos_Nat_Maps_P renames Pos64_Nat64_Maps.Formal_Model.P;
-   package Pos_Nat_Maps_K renames Pos64_Nat64_Maps.Formal_Model.K;
    package Pos_Nat_Maps_M is new SPARK.Containers.Functional.Maps (Pos64, Nat64);
    subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
@@ -50,20 +48,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
                        renames Element;
 
-   --  function Same_Mappings
-   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
-   --     N : Pos_WP_Maps_M.Map)
-   --     return Boolean
-   --  with Ghost,
-   --       Annotate => (GNATprove, Inline_For_Proof);
-   --
-   --  function Model (M : Pos64_WP_Map) return Pos_WP_Maps_M.Map with
-   --    Post => Same_Mappings
-   --      (Pos64_WP_Maps.Formal_Model.Model (M), Model'Result);
+   -- package Pos_Vec_M renames Pos64_Vectors.Formal_Model.M;
+   -- use Pos_Vec_M;
 
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vectors.Vector;
+      L_Old, L_New : Pos64_Vector;
       New_Item : Pos64)
      with Ghost,
        Pre =>
@@ -77,7 +67,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          (for all Item of Model (L_New) => Contains (M, Item));
 
    procedure Lemma_First_Element_Unchanged_After_Append
-     (V_Old, V_New : Pos64_Vectors.Vector;
+     (V_Old, V_New : Pos64_Vector;
       First_Item : Pos64;
       New_Item : Pos64)
      with Ghost,
@@ -93,7 +83,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
 
    procedure Lemma_List_Still_Linked_After_Append
      (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vectors.Vector;
+      L_Old, L_New : Pos64_Vector;
       New_Item : Pos64)
      with
        Ghost,
@@ -137,7 +127,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Cycle_Index : Path_Index; -- If MC.WaypointList has a cycle, this is the index in Path that forms a cycle with the the last element
       Segment : Pos64_Vector; -- Next segment
       Next_First_Id : Nat64;  -- The waypoint Id to use for FirstWaypoint of the next segment
-      Prev_Segment_Index : Path_Index;
       Next_Segment_Index : Path_Index; -- Index in Path for start of segment after this one
       New_Command : Boolean; -- Whether the most recent MissionCommand has yet -- been used to produce a segment
       Headed_To_First_Id : Boolean := False; -- Whether vehicle has reached -- FirstWaypoint of next segment
@@ -174,11 +163,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Path_Index in 1 .. Pos_Vec_M.Last (Path) and
        Pos_Vec_M.Last (Segment) <= Integer (Max);
 
-   --  function Is_Successor
-   --    (Path : Pos64_Vector;
-   --     E1, E2 : Pos64) return Boolean
-   --    with Ghost, Global => null;
-
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;
       MC : MissionCommand)
@@ -199,17 +183,13 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
           then
             State.Next_Segment_Index = 0 and State.Cycle_Index = 0 and
-            State.Next_First_Id = 0 and Is_Empty (State.Path) --) and then
-          -- (if Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint) then
+            State.Next_First_Id = 0 and Is_Empty (State.Path)
           else
             State.Next_First_Id = MC.FirstWaypoint and then
             (Element (Model (State.Path), State.Next_Segment_Index) =
                  MC.FirstWaypoint or else
             (Length (State.Path) > 1 and then
                  Element (Model (State.Path), 2) = MC.FirstWaypoint))) and then
-             --  Successor (State.Id_To_Next_Id,
-             --             Element (Model (State.Path),
-             --                      State.Next_Segment_Index)) = MC.FirstWaypoint)) and then
          -- Every Id in Path should come from Id_To_Next_Id, be unique, and its
          -- successor should be corresponding value stored in Id_To_Next_Id
          (for all Id of Model (State.Path) => Contains (State.Id_To_Next_Id, Id)) and then
@@ -258,9 +238,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                State.MC.FirstWaypoint or else
             (Length (State.Path) > 1 and then
                Element (Model (State.Path), 2) = State.MC.FirstWaypoint))
-             --  Successor (State.Id_To_Next_Id,
-             --             Element (Model (State.Path),
-             --                      State.Next_Segment_Index)) = State.MC.FirstWaypoint))
            else
              (if State.Cycle_Index = 0 then
                State.Next_Segment_Index < Last_Index (State.Path) and then
@@ -271,10 +248,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                    Element (Model (State.Path), State.Next_Segment_Index + 1) = State.Next_First_Id
                  else
                    Element (Model (State.Path), State.Cycle_Index) = State.Next_First_Id))) and then
-             --  State.Next_First_Id =
-             --    Successor (State.Id_To_Next_Id,
-             --               Element (Model (State.Path), State.Next_Segment_Index))) and then
-
          (for all Id of State.Path => Contains (State.Id_To_Waypoint, Id)),
          Post =>
            State'Old.MC = State.MC and then

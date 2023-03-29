@@ -39,7 +39,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vectors.Vector;
+      L_Old, L_New : Pos64_Vector;
       New_Item : Pos64)
    is
    begin
@@ -48,7 +48,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
    procedure Lemma_List_Still_Linked_After_Append
      (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vectors.Vector;
+      L_Old, L_New : Pos64_Vector;
       New_Item : Pos64)
    is
    begin
@@ -56,7 +56,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    end Lemma_List_Still_Linked_After_Append;
 
    procedure Lemma_First_Element_Unchanged_After_Append
-     (V_Old, V_New : Pos64_Vectors.Vector;
+     (V_Old, V_New : Pos64_Vector;
       First_Item : Pos64;
       New_Item : Pos64)
    is
@@ -92,6 +92,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
    is
      (for all Id of Model (Id_To_Next_Id) =>
+           Contains (Model (Id_To_Waypoint), Id) and then
            Element (Model (Id_To_Next_Id), Id) =
            Element (Model (Id_To_Waypoint), Id).NextWaypoint);
 
