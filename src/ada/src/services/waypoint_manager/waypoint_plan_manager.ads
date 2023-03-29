@@ -137,9 +137,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
    with Ghost, Global => null;
 
-   function Have_Same_Keys
-     (M : Pos64_WP_Maps.Formal_Model.M.Map;
-      N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
+   function Has_Same_Keys
+     (M : Pos64_WP_Map;
+      N : Pos64_Nat64_Map) return Boolean
      with Ghost, Global => null;
 
    function Elements_Are_Unique
@@ -173,8 +173,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Post =>
          State.MC = MC and then
          Waypoints_Are_Subset (State.MC.WaypointList, State.Id_To_Waypoint) and then
-         Have_Same_Keys (Model (State.Id_To_Waypoint),
-                         Model (State.Id_To_Next_Id)) and then
+         Has_Same_Keys (State.Id_To_Waypoint, State.Id_To_Next_Id) and then
          Id_Keys_Match_Waypoint_Ids (State.Id_To_Next_Id, State.Id_To_Waypoint) and then
          -- If MC.FirstWaypoint cannot be found in Id_To_Next_Id,
          -- then path, cycle, first id, and segment info should be 0/empty.

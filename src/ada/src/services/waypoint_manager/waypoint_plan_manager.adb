@@ -64,12 +64,12 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       null;
    end Lemma_First_Element_Unchanged_After_Append;
 
-   function Have_Same_Keys
-     (M : Pos64_WP_Maps.Formal_Model.M.Map;
-      N : Pos64_Nat64_Maps.Formal_Model.M.Map) return Boolean
+   function Has_Same_Keys
+     (M : Pos64_WP_Map;
+      N : Pos64_Nat64_Map) return Boolean
    is
-     ((for all I of M => Has_Key (N, I)) and then
-        (for all I of N => Has_Key (M, I)));
+     ((for all I of Model (M) => Has_Key (Model (N), I)) and then
+        (for all I of Model (N) => Has_Key (Model (M), I)));
 
    function Waypoints_Are_Subset
      (WaypointList : WP_Seq;
@@ -108,7 +108,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      Pre => Length (WaypointList) <= Max,
      Post =>
        Waypoints_Are_Subset (WaypointList, Id_To_Waypoint) and then
-       Have_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)) and then
+       Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id) and then
        Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
    procedure Extract_MissionCommand_Maps
@@ -143,7 +143,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (Waypoints_Are_Subset (WaypointList, Id_To_Waypoint));
          pragma Loop_Invariant
-           (Have_Same_Keys (Model (Id_To_Waypoint), Model (Id_To_Next_Id)));
+           (Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
          pragma Loop_Invariant
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
       end loop;
