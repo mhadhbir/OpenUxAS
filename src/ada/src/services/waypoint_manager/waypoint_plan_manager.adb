@@ -120,6 +120,15 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
       Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path));
 
+   function Cycle_Index_Is_Valid
+     (Cycle_Index : Vector_Index;
+      Path : Pos64_Vector;
+      Id_To_Next_Id : Pos64_Nat64_Map) return Boolean
+   is
+     (Iter_Has_Element (Path, Cycle_Index) and then
+      Element (Path, Cycle_Index) =
+          Successor (Id_To_Next_Id, Last_Element (Path)));
+
    ---------------------------------
    -- Extract_MissionCommand_Maps --
    ---------------------------------

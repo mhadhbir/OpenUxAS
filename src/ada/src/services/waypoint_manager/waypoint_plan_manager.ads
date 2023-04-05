@@ -181,6 +181,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        (for all Id of Model (Path) =>
           Contains (Model (Id_To_Next_Id), Id));
 
+   function Cycle_Index_Is_Valid
+     (Cycle_Index : Vector_Index;
+      Path : Pos64_Vector;
+      Id_To_Next_Id : Pos64_Nat64_Map) return Boolean with
+     Ghost,
+     Pre =>
+       Length (Path) > 0 and then
+       (for all Id of Model (Path) =>
+          Contains (Model (Id_To_Next_Id), Id));
+
    procedure Handle_MissionCommand
      (State : in out Waypoint_Plan_Manager_State;
       MC : MissionCommand)
@@ -201,17 +211,14 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             State.Next_Segment_Index = 0 and State.Cycle_Index = 0 and
             State.Next_First_Id = 0 and Is_Empty (State.Path)
           else
-            State.Next_First_Id = MC.FirstWaypoint and then
             State.Next_Segment_Index = 1 and then
+            State.Next_First_Id = MC.FirstWaypoint and then
             FirstWaypoint_Is_First_Or_Second_Element
               (MC.FirstWaypoint, State.Path)) and then
          (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) and then
              Last_Element_Forms_Cycle (State.Id_To_Next_Id, State.Path)
           then
-            State.Cycle_Index > 0 and then
-            Iter_Has_Element (State.Path, State.Cycle_Index) and then
-            Element (State.Path, State.Cycle_Index) =
-              Successor (State.Id_To_Next_Id, Last_Element (State.Path))
+            Cycle_Index_Is_Valid (State.Cycle_Index, State.Path, State.Id_To_Next_Id)
           else
             State.Cycle_Index = 0);
 
