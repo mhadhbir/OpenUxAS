@@ -72,20 +72,20 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
         (for all I of Model (N) => Has_Key (Model (M), I)));
 
    function Waypoints_Are_Subset
-     (WaypointList : WP_Seq;
-      Id_To_Waypoint : Pos64_WP_Map) return Boolean
+     (Id_To_Waypoint : Pos64_WP_Map;
+      WaypointList : WP_Seq) return Boolean
    is
      (for all Id of Model (Id_To_Waypoint) =>
            Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
-                     Get (Model (Id_To_Waypoint), Id)));
+                     Element (Model (Id_To_Waypoint), Id)));
 
    function Elements_Are_Unique
      (V : Pos64_Vector) return Boolean
    is
-     (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
-        (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
+     (for all I in Pos_Vec_M.First .. Last (Model (V)) =>
+        (for all J in Pos_Vec_M.First .. Last (Model (V)) =>
              (if I /= J then
-                     Element (Model (V), I) /= Element (Model (V), J))));
+                   Element (Model (V), I) /= Element (Model (V), J))));
 
    function Id_Keys_Match_Waypoint_Ids
      (Id_To_Next_Id : Pos64_Nat64_Map;
@@ -95,6 +95,22 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Contains (Model (Id_To_Waypoint), Id) and then
            Element (Model (Id_To_Next_Id), Id) =
            Element (Model (Id_To_Waypoint), Id).NextWaypoint);
+
+   function Elements_Are_Successors
+     (Id_To_Next_Id : Pos64_Nat64_Map;
+      Path : Pos64_Vector) return Boolean
+   is
+     (for all I in Pos_Vec_M.First .. Last (Model (Path)) - 1 =>
+         Successor (Model (Id_To_Next_Id), Element (Model (Path), I)) =
+           Element (Model (Path), I + 1));
+
+   function FirstWaypoint_Is_First_Or_Second_Element
+     (FirstWaypoint : Pos64;
+      Path : Pos64_Vector) return Boolean
+   is
+     (Element (Model (Path), 1) = FirstWaypoint or else
+        (Length (Path) > 1 and then
+         Element (Model (Path), 2) = FirstWaypoint));
 
    ---------------------------------
    -- Extract_MissionCommand_Maps --
@@ -107,7 +123,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre => Length (WaypointList) <= Max,
      Post =>
-       Waypoints_Are_Subset (WaypointList, Id_To_Waypoint) and then
+       Waypoints_Are_Subset (Id_To_Waypoint, WaypointList) and then
        Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id) and then
        Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
@@ -141,7 +157,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (Integer (Length (Id_To_Waypoint)) <= I - WP_Sequences.First + 1);
          pragma Loop_Invariant
-           (Waypoints_Are_Subset (WaypointList, Id_To_Waypoint));
+           (Waypoints_Are_Subset (Id_To_Waypoint, WaypointList));
          pragma Loop_Invariant
            (Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
          pragma Loop_Invariant
@@ -166,7 +182,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          not Is_Empty (Id_To_Next_Id) and then
          Contains (Id_To_Next_Id, First_Id),
        Post =>
-         Next_Segment_Index > 0 and then
+         Next_Segment_Index = 1 and then
          not Is_Empty (Path) and then
          Iter_Has_Element (Path, Next_Segment_Index) and then
          (Element (Model (Path), Next_Segment_Index) = First_Id or else
