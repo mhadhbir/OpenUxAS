@@ -112,6 +112,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
         (Length (Path) > 1 and then
          Element (Model (Path), 2) = FirstWaypoint));
 
+   function Last_Element_Forms_Cycle
+     (Id_To_Next_Id : Pos64_Nat64_Map;
+      Path : Pos64_Vector) return Boolean
+   is
+     (Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
+      Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
+      Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path));
+
    ---------------------------------
    -- Extract_MissionCommand_Maps --
    ---------------------------------
