@@ -19,24 +19,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
    use Pos64_Vectors.Formal_Model.M;
 
-   --  function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
-   --                      renames Element;
-
-   --  function Same_Mappings
-   --    (M : Pos64_WP_Maps.Formal_Model.M.Map;
-   --     N : Pos_WP_Maps_M.Map)
-   --  return Boolean is
-   --    ((for all I of M => Pos_WP_Maps_M.Has_Key (N, I))
-   --     and then (for all I of N => Contains (M, I))
-   --     and then
-   --       (for all I of N =>
-   --            (for all E of Pos_WP_Maps_M.Get (N, I) =>
-   --                    Contains (Element (M, I), E)))
-   --     and then
-   --       (for all I of N =>
-   --            (for all E of Element (M, I) =>
-   --                    Contains (Pos_WP_Maps_M.Get (N, I), E))));
-
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
       L_Old, L_New : Pos64_Vector;
@@ -125,7 +107,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Path : Pos64_Vector;
       Id_To_Next_Id : Pos64_Nat64_Map) return Boolean
    is
-     (Iter_Has_Element (Path, Cycle_Index) and then
+     (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
       Element (Path, Cycle_Index) =
           Successor (Id_To_Next_Id, Last_Element (Path)));
 
@@ -197,26 +179,18 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
        Pre =>
          Is_Empty (Path) and then
          not Is_Empty (Id_To_Next_Id) and then
-         Contains (Id_To_Next_Id, First_Id),
+         Contains (Model (Id_To_Next_Id), First_Id),
        Post =>
          Next_Segment_Index = 1 and then
          not Is_Empty (Path) and then
-         Iter_Has_Element (Path, Next_Segment_Index) and then
-         (Element (Model (Path), Next_Segment_Index) = First_Id or else
-            (Length (Path) > 1 and then
-               Element (Model (Path), 2) = First_Id)) and then
-         (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
+         Next_Segment_Index <= Last_Index (Path) and then
+         FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path) and then
+         (for all Id of Model (Path) => Contains (Model (Id_To_Next_Id), Id)) and then
          Elements_Are_Unique (Path) and then
-         (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
-          Element (Id_To_Next_Id, Element (Path, I)) =
-              Element (Path, I + 1)) and then
-         (if Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
-            Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
-            Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
+         Elements_Are_Successors (Id_To_Next_Id, Path) and then
+         (if Last_Element_Forms_Cycle (Id_To_Next_Id, Path)
           then
-            Cycle_Index > 0 and then
-            Iter_Has_Element (Path, Cycle_Index) and then
-            Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path))
+            Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
           else
             Cycle_Index = 0);
 
@@ -263,8 +237,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
              Successor (Id_To_Next_Id, Element (Model (Path), I)) =
              Element (Model (Path), I + 1));
 
+      -- Append successors to the list, looking for cycle as we go
       while Length (Path) < Length (Id_To_Next_Id) loop
-
          if Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
            Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
            Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path)
@@ -273,8 +247,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Find_Index (Path,
                           Successor (Id_To_Next_Id, Last_Element (Path)));
             pragma Assert
-              (Cycle_Index > 0 and then
-               Iter_Has_Element (Path, Cycle_Index) and then
+              (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
                Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
             return;
          elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
@@ -328,9 +301,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            Find_Index (Path,
                        Successor (Id_To_Next_Id, Last_Element (Path)));
          pragma Assert
-              (Cycle_Index > 0 and then
-               Iter_Has_Element (Path, Cycle_Index) and then
-               Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
+           (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
+            Element (Path, Cycle_Index) = Successor (Id_To_Next_Id, Last_Element (Path)));
       end if;
 
    end Construct_Path;
@@ -556,19 +528,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             New_First_Id := 0;
          end if;
 
-         --  if Len = Desired_Segment_Length then
-         --     if Last_Index (Path) = Last_Index (Segment) then
-         --        New_Path_Index := 0;
-         --        New_First_Id := 0;
-         --     else
-         --        New_Path_Index := Path_Index + Desired_Segment_Length - Overlap;
-         --        New_First_Id := Element (Path, New_Path_Index + 1);
-         --     end if;
-         --  else
-         --     New_Path_Index := 0;
-         --     New_First_Id := 0;
-         --  end if;
-
       end if;
 
    end Initialize_Segment;
@@ -637,14 +596,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       State.New_Command := False;
       State.Next_Segment_Index := New_Path_Index;
       State.Next_First_Id := New_First_Id;
-
-      --  if State.Cycle_Index > 0 then
-      --     if State.Next_Segment_Index < Last_Index (State.Path) then
-      --        State.Next_First_Id := Element (State.Path, State.Next_Segment_Index + 1);
-      --     else
-      --        State.Next_First_Id := Element (State.Path, State.Cycle_Index);
-      --     end if;
-      --  end if;
 
    end Produce_Segment;
 

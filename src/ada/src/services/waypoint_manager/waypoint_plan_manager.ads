@@ -206,30 +206,18 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          (for all Id of Model (State.Path) => Contains (State.Id_To_Next_Id, Id)) and then
          Elements_Are_Successors (State.Id_To_Next_Id, State.Path) and then
          Elements_Are_Unique (State.Path) and then
-         (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint)
-          then
-            State.Next_Segment_Index = 0 and State.Cycle_Index = 0 and
-                State.Next_First_Id = 0 and Is_Empty (State.Path)
-            else
-              State.Next_Segment_Index = 1 and then
-                State.Next_First_Id = MC.FirstWaypoint and then
-                  FirstWaypoint_Is_First_Or_Second_Element (MC.FirstWaypoint, State.Path) and then
-           (if Last_Element_Forms_Cycle (State.Id_To_Next_Id, State.Path) then
-              Cycle_Index_Is_Valid (State.Cycle_Index, State.Path, State.Id_To_Next_Id)
-                else
-                  State.Cycle_Index = 0));
-
-         --   else
-         --     State.Next_Segment_Index = 1 and then
-         --     State.Next_First_Id = MC.FirstWaypoint and then
-         --     FirstWaypoint_Is_First_Or_Second_Element
-         --       (MC.FirstWaypoint, State.Path)) and then
-         --  (if Contains (State.Id_To_Next_Id, MC.FirstWaypoint) and then
-         --      Last_Element_Forms_Cycle (State.Id_To_Next_Id, State.Path)
-         --   then
-         --     Cycle_Index_Is_Valid (State.Cycle_Index, State.Path, State.Id_To_Next_Id)
-         --   else
-         --     State.Cycle_Index = 0);
+         (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint) then
+            State.Next_Segment_Index = 0 and State.Next_First_Id = 0 and
+            Is_Empty (State.Path) and State.Cycle_Index = 0
+          else
+            State.Next_Segment_Index = 1 and then
+            State.Next_First_Id = MC.FirstWaypoint and then
+            FirstWaypoint_Is_First_Or_Second_Element
+              (MC.FirstWaypoint, State.Path) and then
+            (if Last_Element_Forms_Cycle (State.Id_To_Next_Id, State.Path) then
+               Cycle_Index_Is_Valid (State.Cycle_Index, State.Path, State.Id_To_Next_Id)
+             else
+               State.Cycle_Index = 0));
 
    procedure Produce_Segment
      (State : in out Waypoint_Plan_Manager_State;
