@@ -10,72 +10,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    use all type Pos64_Nat64_Maps.Formal_Model.M.Map;
    use Pos64_Vectors.Formal_Model.M;
 
-   --  function Has_Same_Keys
-   --    (M : Pos64_WP_Map;
-   --     N : Pos64_Nat64_Map) return Boolean
-   --  is
-   --    ((for all I of Model (M) => Has_Key (Model (N), I)) and then
-   --       (for all I of Model (N) => Has_Key (Model (M), I)));
-
-   --  function Waypoints_Are_Subset
-   --    (Id_To_Waypoint : Pos64_WP_Map;
-   --     WaypointList : WP_Seq) return Boolean
-   --  is
-   --    (for all Id of Model (Id_To_Waypoint) =>
-   --          Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
-   --                    Element (Model (Id_To_Waypoint), Id)));
-
-   --  function Elements_Are_Unique
-   --    (V : Pos64_Vector) return Boolean
-   --  is
-   --    (for all I in Pos_Vec_M.First .. Last (Model (V)) =>
-   --       (for all J in Pos_Vec_M.First .. Last (Model (V)) =>
-   --            (if I /= J then
-   --                  Element (Model (V), I) /= Element (Model (V), J))));
-
-   --  function Id_Keys_Match_Waypoint_Ids
-   --    (Id_To_Next_Id : Pos64_Nat64_Map;
-   --     Id_To_Waypoint : Pos64_WP_Map) return Boolean
-   --  is
-   --    (for all Id of Model (Id_To_Next_Id) =>
-   --          Contains (Model (Id_To_Waypoint), Id) and then
-   --          Element (Model (Id_To_Next_Id), Id) =
-   --          Element (Model (Id_To_Waypoint), Id).NextWaypoint);
-
-   --  function Elements_Are_Successors
-   --    (Id_To_Next_Id : Pos64_Nat64_Map;
-   --     Path : Pos64_Vector) return Boolean
-   --  is
-   --    (for all I in Pos_Vec_M.First .. Last (Model (Path)) - 1 =>
-   --        Successor (Model (Id_To_Next_Id), Element (Model (Path), I)) =
-   --          Element (Model (Path), I + 1));
-
-   --  function FirstWaypoint_Is_First_Or_Second_Element
-   --    (FirstWaypoint : Pos64;
-   --     Path : Pos64_Vector) return Boolean
-   --  is
-   --    (Element (Model (Path), 1) = FirstWaypoint or else
-   --       (Length (Path) > 1 and then
-   --        Element (Model (Path), 2) = FirstWaypoint));
-
-   --  function Last_Element_Forms_Cycle
-   --    (Id_To_Next_Id : Pos64_Nat64_Map;
-   --     Path : Pos64_Vector) return Boolean
-   --  is
-   --    (Successor (Id_To_Next_Id, Last_Element (Path)) /= 0 and then
-   --     Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
-   --     Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path));
-
-   --  function Cycle_Index_Is_Valid
-   --    (Cycle_Index : Vector_Index;
-   --     Path : Pos64_Vector;  -- Formal vector
-   --     Id_To_Next_Id : Pos64_Nat64_Map) -- Formal hashed map
-   --  return Boolean
-   --  is
-   --    (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
-   --     Element (Path, Cycle_Index) =
-   --         Successor (Id_To_Next_Id, Last_Element (Path)));
-
    ---------------------------------
    -- Extract_MissionCommand_Maps --
    ---------------------------------
@@ -196,7 +130,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               (Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id));
             return;
          elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0 or else
-           not Contains (Id_To_Next_Id, Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
+           not Contains
+             (Id_To_Next_Id,
+              Pos64 (Successor (Id_To_Next_Id, Last_Element (Path)))) or else
            Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path)))
          then
             return;
@@ -291,11 +227,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          Last_Index (Path) <= Positive (Max) and then
          Path_Index in 1 .. Last_Index (Path) and then
          Cycle_Index in 0 .. Last_Index (Path) - 1 and then
-         Overlap >= 2 and then Overlap < Positive (Max) and then
-         Desired_Segment_Length > Overlap and then
-         Desired_Segment_Length <= Positive (Max),
+         Overlap in 2 .. Positive (Max) - 1 and then
+         Desired_Segment_Length in Overlap + 1 .. Positive (Max),
        Post =>
-         Element (Model (Segment), 1) = Element (Model (Path), Path_Index) and then
+         Element (Segment, 1) = Element (Path, Path_Index) and then
          (for all Id of Model (Segment) =>
             Contains (Model (Path), 1, Last (Model (Path)), Id)) and then
          (if Cycle_Index > 0 then
@@ -349,9 +284,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          for SI in 1 .. Len loop
             pragma Loop_Invariant
               (PI =
-                 (if Path_Index + SI - 1 <= Last_Index (Path)
-                  then Path_Index + SI - 1
-                  else (Path_Index + SI - 1 - Last_Index (Path) - 1) mod
+                 (if Path_Index + SI - 1 <= Last_Index (Path) then
+                       Path_Index + SI - 1
+                  else
+                    (Path_Index + SI - 1 - Last_Index (Path) - 1) mod
                     (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index));
             pragma Loop_Invariant
               (if SI > Seg_Overlap_Ind then

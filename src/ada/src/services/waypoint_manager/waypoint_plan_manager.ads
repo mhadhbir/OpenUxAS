@@ -235,9 +235,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             State.Next_First_Id = State.MC.FirstWaypoint and then
             FirstWaypoint_Is_First_Or_Second_Element
               (State.MC.FirstWaypoint, State.Path)
-            --  (Element (Model (State.Path), 1) = State.MC.FirstWaypoint or else
-            --     (Length (State.Path) > 1 and then
-            --      Element (Model (State.Path), 2) = State.MC.FirstWaypoint))
           else
             (if State.Cycle_Index = 0 then
                State.Next_Segment_Index < Last_Index (State.Path) and then
@@ -251,45 +248,60 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                   Element (Model (State.Path), State.Cycle_Index) =
                     State.Next_First_Id))) and then
          (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id)),
-         Post =>
-           State'Old.MC = State.MC and then
-           State'Old.Id_To_Waypoint = State.Id_To_Waypoint and then
-           State'Old.Id_To_Next_Id = State.Id_To_Next_Id and then
-           State'Old.Path = State.Path and then
-           State'Old.Cycle_Index = State.Cycle_Index and then
-           State'Old.Headed_To_First_Id = State.Headed_To_First_Id and then
-           State.New_Command = False and then
-           Element (Model (State.Segment), 1) =
-             Element (Model (State.Path), State'Old.Next_Segment_Index) and then
-           (for all Id of Model (State.Segment) => Pos_Vec_M.Contains (Model (State.Path), 1, Pos_Vec_M.Last (Model (State.Path)), Id)) and then
+       Post =>
+         State'Old.MC = State.MC and then
+         State'Old.Id_To_Waypoint = State.Id_To_Waypoint and then
+         State'Old.Id_To_Next_Id = State.Id_To_Next_Id and then
+         State'Old.Path = State.Path and then
+         State'Old.Cycle_Index = State.Cycle_Index and then
+         State'Old.Headed_To_First_Id = State.Headed_To_First_Id and then
+         State.New_Command = False and then
+         -- First element of segment is next segment in path
+         -- Segment starts at next index
+         Element (Model (State.Segment), 1) =
+         Element (Model (State.Path), State'Old.Next_Segment_Index) and then
+         (for all Id of Model (State.Segment) =>
+           Pos_Vec_M.Contains (Model (State.Path), 1, Pos_Vec_M.Last (Model (State.Path)), Id)) and then
            (if State.Cycle_Index > 0 then
+              -- Segment length is full
               Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
+              -- Is subsegment of path with cycle
               Is_Subsegment (State.Path, State.Cycle_Index, State.Next_Segment_Index'Old, State.Segment) and then
               State.Next_Segment_Index in 1 .. Pos_Vec_M.Last (Model (State.Path)) and then
+              -- Element in current segment overlap matches next planned segment start
               Element (Model (State.Segment), Pos_Vec_M.Last (Model (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1) =
               Element (Model (State.Path), State.Next_Segment_Index) and then
+              -- Next_First_Id conforms with Next_Segment_Index
               (if State.Next_Segment_Index < Last_Index (State.Path) then
                  State.Next_First_Id = Element (Model (State.Path), State.Next_Segment_Index + 1)
                else
                  State.Next_First_Id = Element (Model (State.Path), State.Cycle_Index))
             else
+              -- Segment elements match Path elements starting at Next_Segment_Index in Path
               (for all I in 1 .. Integer (Pos_Vec_M.Length (Model (State.Segment))) =>
                Element (Model (State.Segment), I) = Element (Model (State.Path), State.Next_Segment_Index'Old + I - 1)) and then
               (if Positive (Pos_Vec_M.Length (Model (State.Path))) - State.Next_Segment_Index'Old + 1 >= Integer (Config.NumberWaypointsToServe)
+               -- Full segment length remaining in path
                then
+                 -- Segment length is full
                  Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
                  (if Last_Index (State.Path) = Last_Index (State.Segment)
+                  -- At end of path
                   then
-                      State.Next_Segment_Index = 0 and then
-                      State.Next_First_Id = 0
+                    State.Next_Segment_Index = 0 and then
+                    State.Next_First_Id = 0
                   else
+                    -- Next_First_Id conforms with Next_Segment_Index
                     State.Next_First_Id = Element (Model (State.Path), State.Next_Segment_Index + 1) and then
+                    -- Next_Segment_Index overlaps current segment
                     State.Next_Segment_Index = State.Next_Segment_Index'Old + Integer (Config.NumberWaypointsToServe) - Integer (Config.NumberWaypointsOverlap) and then
+                    -- Element in current segment overlap matches next planned segment start
                     (Element (Model (State.Segment), Pos_Vec_M.Last (Model (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1) =
-                       Element (Model (State.Path), State.Next_Segment_Index)))
+                     Element (Model (State.Path), State.Next_Segment_Index)))
                 else
+                  -- Segment length is elements remaining
                   Positive (Length (State.Segment)) = Positive (Length (State.Path)) - State.Next_Segment_Index'Old + 1 and then
-                 State.Next_Segment_Index = 0));
+                  State.Next_Segment_Index = 0));
 
    procedure Lemma_Map_Still_Contains_List_After_Append
      (M : Pos64_Nat64_Map;
