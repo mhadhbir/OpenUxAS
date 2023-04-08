@@ -72,22 +72,22 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (First_Id : Pos64;
       Id_To_Next_Id : Pos64_Nat64_Map;
       Path : in out Pos64_Vector;
-      Next_Segment_Index : out Vector_Index;
-      Cycle_Index : out Vector_Index)
+      Next_Index : out Vector_Index;
+      Cycle_Index : out Ext_Vector_Index)
      with
        Pre =>
          Is_Empty (Path) and then
          not Is_Empty (Id_To_Next_Id) and then
-         Contains (Model (Id_To_Next_Id), First_Id),
+         Contains (Id_To_Next_Id, First_Id),
        Post =>
-         Next_Segment_Index = 1 and then
+         Next_Index = 1 and then
          not Is_Empty (Path) and then
-         Next_Segment_Index <= Last_Index (Path) and then
+         Next_Index <= Last_Index (Path) and then
          FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path) and then
          (for all Id of Model (Path) => Contains (Model (Id_To_Next_Id), Id)) and then
          Elements_Are_Unique (Path) and then
          Elements_Are_Successors (Id_To_Next_Id, Path) and then
-         (if Last_Element_Forms_Cycle (Id_To_Next_Id, Path) then
+         (if Path_Has_Cycle (Id_To_Next_Id, Path) then
             Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
           else
             Cycle_Index = 0);
@@ -96,14 +96,14 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      (First_Id : Pos64;
       Id_To_Next_Id : Pos64_Nat64_Map;
       Path : in out Pos64_Vector;
-      Next_Segment_Index : out Vector_Index;
-      Cycle_Index : out Vector_Index)
+      Next_Index : out Vector_Index;
+      Cycle_Index : out Ext_Vector_Index)
    is
       use Pos64_Vectors.Formal_Model.M;
       use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
-      Next_Segment_Index := 1;
+      Next_Index := 1;
       Cycle_Index := 0;
 
       -- Append predecessor to First_Id to the list if found
@@ -122,7 +122,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       -- Append successors to the list, looking for cycle as we go
       while Length (Path) < Length (Id_To_Next_Id) loop
-         if Last_Element_Forms_Cycle (Id_To_Next_Id, Path) then
+         if Path_Has_Cycle (Id_To_Next_Id, Path) then
             Cycle_Index :=
               Find_Index (Path,
                           Successor (Id_To_Next_Id, Last_Element (Path)));
@@ -152,7 +152,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Elements_Are_Unique (Path));
       end loop;
 
-      if Last_Element_Forms_Cycle (Id_To_Next_Id, Path) then
+      if Path_Has_Cycle (Id_To_Next_Id, Path) then
          Cycle_Index :=
            Find_Index (Path, Successor (Id_To_Next_Id, Last_Element (Path)));
       end if;
@@ -175,7 +175,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       State.MC := MC;
       State.New_Command := True;
       Clear (State.Path);
-      State.Next_Segment_Index := 0;
+      State.Next_Index := 0;
       State.Cycle_Index := 0;
       Extract_MissionCommand_Maps
         (State.MC.WaypointList, State.Id_To_Waypoint, State.Id_To_Next_Id);
@@ -191,7 +191,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Construct_Path (First_Id,
                       State.Id_To_Next_Id,
                       State.Path,
-                      State.Next_Segment_Index,
+                      State.Next_Index,
                       State.Cycle_Index);
 
       State.Next_First_Id := First_Id;
@@ -214,144 +214,142 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    procedure Initialize_Segment
      (Path : Pos64_Vector;
       Cycle_Index : Ext_Vector_Index;
-      Path_Index : Vector_Index;
+      Segment_Index : Vector_Index;
       Desired_Segment_Length : Positive;
       Overlap : Positive;
       Segment : in out Pos64_Vector;
-      New_Path_Index : out Ext_Vector_Index;
-      New_First_Id : out Nat64)
+      Next_Index : out Ext_Vector_Index;
+      Next_First_Id : out Nat64)
      with
        Pre =>
-         Is_Empty (Segment) and then
-         Length (Path) > 0 and then
-         Last_Index (Path) <= Positive (Max) and then
-         Path_Index in 1 .. Last_Index (Path) and then
-         Cycle_Index in 0 .. Last_Index (Path) - 1 and then
-         Overlap in 2 .. Positive (Max) - 1 and then
-         Desired_Segment_Length in Overlap + 1 .. Positive (Max),
+         Is_Empty (Segment)
+         and then Length (Path) > 0
+         and then Last_Index (Path) <= Positive (Max)
+         and then Segment_Index in 1 .. Last_Index (Path)
+         and then Cycle_Index in 0 .. Last_Index (Path) - 1
+         and then Overlap in 2 .. Positive (Max) - 1
+         and then Desired_Segment_Length in Overlap + 1 .. Positive (Max),
        Post =>
-         Element (Segment, 1) = Element (Path, Path_Index) and then
-         (for all Id of Model (Segment) =>
-            Contains (Model (Path), 1, Last (Model (Path)), Id)) and then
-         (if Cycle_Index > 0 then
-            Positive (Length (Segment)) = Desired_Segment_Length and then
-            Is_Subsegment (Path, Cycle_Index, Path_Index, Segment) and then
-            New_Path_Index in 1 .. Last (Model (Path)) and then
-            Element (Model (Segment), Last (Model (Segment)) - Overlap + 1) =
-              Element (Model (Path), New_Path_Index) and then
-            (if New_Path_Index < Last_Index (Path) then
-                 New_First_Id = Element (Model (Path), New_Path_Index + 1)
-             else
-                 New_First_Id = Element (Model (Path), Cycle_Index))
+         Element (Segment, 1) = Element (Path, Segment_Index)
+         and then (for all Id of Model (Segment) => Contains (Path, Id))
+         and then
+             (if Cycle_Index > 0 then
+                Positive (Length (Segment)) = Desired_Segment_Length
+                and then Is_Subsegment_Of_Path_With_Cycle
+                           (Segment, Segment_Index, Path, Cycle_Index)
+                and then Next_Index in 1 .. Last (Model (Path))
+                and then Next_Segment_Will_Overlap_Current_Segment
+                           (Path, Next_Index, Segment, Overlap)
+                and then Next_First_Id_Will_Be_Element_After_Next_Index
+                           (Next_First_Id, Next_Index, Cycle_Index, Path)
           else
-            (for all I in 1 .. Integer (Length (Segment)) =>
-               Element (Model (Segment), I) = Element (Model (Path), Path_Index + I - 1)) and then
-            (if Positive (Length (Path)) - Path_Index + 1 >= Desired_Segment_Length
+            Is_Subsegment_Of_Path_Without_Cycle (Segment, Segment_Index, Path) and then
+            (if Remaining_Path_Length (Path, Segment_Index) >= Desired_Segment_Length
              then
                Positive (Length (Segment)) = Desired_Segment_Length and then
                (if Last_Index (Path) = Last_Index (Segment) then
-                  New_Path_Index = 0 and then New_First_Id = 0
+                  Next_Index = 0 and then Next_First_Id = 0
                 else
-                  New_Path_Index = Path_Index + Desired_Segment_Length - Overlap and then
-                    (Element (Model (Segment), Last (Model (Segment)) - Overlap + 1) =
-                         Element (Model (Path), New_Path_Index)) and then
-                  New_First_Id = Element (Model (Path), New_Path_Index + 1))
-             else Positive (Length (Segment)) = Positive (Length (Path)) - Path_Index + 1 and then
-               New_Path_Index = 0 and then New_First_Id = 0));
+                  Next_Index = Segment_Index + Desired_Segment_Length - Overlap and then
+                  Next_Segment_Will_Overlap_Current_Segment
+                    (Path, Next_Index, Segment, Overlap) and then
+                  Next_First_Id_Will_Be_Element_After_Next_Index
+                    (Next_First_Id, Next_Index, Cycle_Index, Path))
+             else
+               Positive (Length (Segment)) = Remaining_Path_Length (Path, Segment_Index) and then
+               Next_Index = 0 and then Next_First_Id = 0));
 
    procedure Initialize_Segment
      (Path : Pos64_Vector;
       Cycle_Index : Ext_Vector_Index;
-      Path_Index : Vector_Index;
+      Segment_Index : Vector_Index;
       Desired_Segment_Length : Positive;
       Overlap : Positive;
       Segment : in out Pos64_Vector;
-      New_Path_Index : out Ext_Vector_Index;
-      New_First_Id : out Nat64)
+      Next_Index : out Ext_Vector_Index;
+      Next_First_Id : out Nat64)
    is
       Len : Positive;
-      PI : Positive := Path_Index;
+      Ind : Positive := Segment_Index;
       Seg_Overlap_Ind : Positive;
       use Pos64_Vectors.Formal_Model;
       use Pos64_Vectors.Formal_Model.M;
    begin
 
-      New_Path_Index := 0;
+      Next_Index := 0;
 
       if Cycle_Index > 0 then
          Len := Desired_Segment_Length;
          Seg_Overlap_Ind := Len - Overlap + 1;
-         for SI in 1 .. Len loop
+         for I in 1 .. Len loop
             pragma Loop_Invariant
-              (PI =
-                 (if Path_Index + SI - 1 <= Last_Index (Path) then
-                       Path_Index + SI - 1
+              (Ind =
+                 (if Segment_Index + I - 1 <= Last_Index (Path) then
+                       Segment_Index + I - 1
                   else
-                    (Path_Index + SI - 1 - Last_Index (Path) - 1) mod
+                    (Segment_Index + I - 1 - Last_Index (Path) - 1) mod
                     (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index));
             pragma Loop_Invariant
-              (if SI > Seg_Overlap_Ind then
-                  New_Path_Index in 1 .. Last (Model (Path)) and then
-                  (Element (Model (Segment), Seg_Overlap_Ind) =
-                      Element (Model (Path), New_Path_Index)));
+              (if I > Seg_Overlap_Ind then
+                  Next_Index in 1 .. Last_Index (Path) and then
+                  Element (Segment, Seg_Overlap_Ind) =
+                    Element (Path, Next_Index));
             pragma Loop_Invariant
-              (Is_Subsegment (Path, Cycle_Index,
-                              Path_Index, Segment));
+              (Is_Subsegment_Of_Path_With_Cycle
+                 (Segment, Segment_Index, Path, Cycle_Index));
             pragma Loop_Invariant
-              (for all Id of Model (Segment) =>
-                   Contains (Model (Path), 1, Last (Model (Path)), Id));
-            pragma Loop_Invariant (Last_Index (Segment) = SI - 1);
+              (for all Id of Model (Segment) => Contains (Path, Id));
+            pragma Loop_Invariant (Last_Index (Segment) = I - 1);
 
-            Append (Segment, Element (Path, PI));
-            if Path_Index + SI - 1 > Last_Index (Path) then
-               Lemma_Mod_Incr (Path_Index + SI - 1 - Last_Index (Path) - 1,
+            Append (Segment, Element (Path, Ind));
+            if Segment_Index + I - 1 > Last_Index (Path) then
+               Lemma_Mod_Incr (Segment_Index + I - 1 - Last_Index (Path) - 1,
                                Last_Index (Path) - Cycle_Index + 1);
             end if;
-            if SI = Seg_Overlap_Ind then
-               New_Path_Index := PI;
-               pragma Assert
-                 (Element (Model (Segment), Seg_Overlap_Ind) =
-                      Element (Model (Path), New_Path_Index));
+            if I = Seg_Overlap_Ind then
+               Next_Index := Ind;
+               pragma Assert (Element (Segment, Seg_Overlap_Ind) =
+                                Element (Path, Next_Index));
             end if;
-            if PI = Last_Index (Path) then
-               PI := Cycle_Index;
+            if Ind = Last_Index (Path) then
+               Ind := Cycle_Index;
             else
-               PI := PI + 1;
+               Ind := Ind + 1;
             end if;
 
          end loop;
-         if New_Path_Index < Last_Index (Path) then
-            New_First_Id := Element (Path, New_Path_Index + 1);
+         if Next_Index < Last_Index (Path) then
+            Next_First_Id := Element (Path, Next_Index + 1);
          else
-            New_First_Id := Element (Path, Cycle_Index);
+            Next_First_Id := Element (Path, Cycle_Index);
          end if;
 
       else
-         Len := (if Integer (Length (Path)) - Path_Index + 1 >=
+         Len := (if Integer (Length (Path)) - Segment_Index + 1 >=
                    Desired_Segment_Length
                  then Desired_Segment_Length
-                 else Integer (Length (Path)) - Path_Index + 1);
+                 else Integer (Length (Path)) - Segment_Index + 1);
          for I in 1 .. Len loop
-            Append (Segment, Element (Path, PI));
-            PI := PI + 1;
-            pragma Loop_Invariant (PI = Path_Index + I);
-            pragma Loop_Invariant (Integer (Length (Segment)) = I);
-            pragma Loop_Invariant (Element (Model (Segment), 1) =
-                                     Element (Model (Path), Path_Index));
+            Append (Segment, Element (Path, Ind));
+            Ind := Ind + 1;
+            pragma Loop_Invariant (Ind = Segment_Index + I);
+            pragma Loop_Invariant (Last_Index (Segment) = I);
+            pragma Loop_Invariant (Element (Segment, 1) =
+                                     Element (Path, Segment_Index));
             pragma Loop_Invariant
-              (for all Id of Model (Segment) =>
-                   Contains (Model (Path), 1, Last (Model (Path)), Id));
+              (for all Id of Model (Segment) => Contains (Path, Id));
             pragma Loop_Invariant
-              (for all I in 1 .. Integer (Length (Segment)) =>
-                   Element (Model (Segment), I) = Element (Model (Path), Path_Index + I - 1));
+              (for all J in 1 .. Last_Index (Segment) =>
+                   Element (Segment, J) =
+                   Element (Path, Segment_Index + J - 1));
          end loop;
 
          if Len = Desired_Segment_Length and then Last_Index (Path) /= Last_Index (Segment) then
-            New_Path_Index := Path_Index + Desired_Segment_Length - Overlap;
-            New_First_Id := Element (Path, New_Path_Index + 1);
+            Next_Index := Segment_Index + Desired_Segment_Length - Overlap;
+            Next_First_Id := Element (Path, Next_Index + 1);
          else
-            New_Path_Index := 0;
-            New_First_Id := 0;
+            Next_Index := 0;
+            Next_First_Id := 0;
          end if;
 
       end if;
@@ -381,7 +379,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
 
       Initialize_Segment (State.Path,
                           State.Cycle_Index,
-                          State.Next_Segment_Index,
+                          State.Next_Index,
                           Positive (Config.NumberWaypointsToServe),
                           Overlap,
                           State.Segment,
@@ -420,7 +418,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       end;
 
       State.New_Command := False;
-      State.Next_Segment_Index := New_Path_Index;
+      State.Next_Index := New_Path_Index;
       State.Next_First_Id := New_First_Id;
 
    end Produce_Segment;
