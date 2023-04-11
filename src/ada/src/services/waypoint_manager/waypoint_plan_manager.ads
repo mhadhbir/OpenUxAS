@@ -19,17 +19,21 @@ package Waypoint_Plan_Manager with SPARK_Mode is
 
    function Pos64_Hash (X : Pos64) return Ada.Containers.Hash_Type is
      (Ada.Containers.Hash_Type'Mod (X));
-   package Pos64_WP_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
+   package Pos64_WP_Maps is new
+     SPARK.Containers.Formal.Hashed_Maps (Pos64, Waypoint, Pos64_Hash);
    use Pos64_WP_Maps;
-   subtype Pos64_WP_Map is Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
-     with Predicate =>
-              (for all Id of Pos64_WP_Map =>
-                 (Element (Pos64_WP_Map, Id).Number = Id
-                  and Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
+   subtype Pos64_WP_Map is
+     Pos64_WP_Maps.Map (Max, Pos64_WP_Maps.Default_Modulus (Max))
+       with Predicate =>
+         (for all Id of Pos64_WP_Map =>
+            (Element (Pos64_WP_Map, Id).Number = Id
+             and Element (Pos64_WP_Map, Id).NextWaypoint >= 0));
 
-   package Pos64_Nat64_Maps is new SPARK.Containers.Formal.Hashed_Maps (Pos64, Nat64, Pos64_Hash);
+   package Pos64_Nat64_Maps is new
+     SPARK.Containers.Formal.Hashed_Maps (Pos64, Nat64, Pos64_Hash);
    use Pos64_Nat64_Maps;
-   subtype Pos64_Nat64_Map is Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
+   subtype Pos64_Nat64_Map is
+     Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new SPARK.Containers.Formal.Vectors (Positive, Pos64);
    subtype Pos64_Vector is Pos64_Vectors.Vector (Max + 1);
@@ -40,11 +44,13 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    use Pos64_Nat64_Maps.Formal_Model;
    use Pos64_Vectors.Formal_Model;
 
-   function Successor (M : Pos64_Nat64_Map; K : Pos64) return Nat64
-                       renames Element;
+   function Successor
+     (M : Pos64_Nat64_Map; K : Pos64) return Nat64
+      renames Element;
 
-   function Successor (M : Pos64_Nat64_Maps.Formal_Model.M.Map; K : Pos64) return Nat64
-                       renames Pos64_Nat64_Maps.Formal_Model.Element;
+   function Successor
+     (M : Pos64_Nat64_Maps.Formal_Model.M.Map; K : Pos64) return Nat64
+      renames Pos64_Nat64_Maps.Formal_Model.Element;
 
    type Waypoint_Plan_Manager_Configuration_Data is record
       -- Number of waypoints remaining before starting the next segment.
@@ -82,16 +88,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       WaypointList : WP_Seq) return Boolean
    is
      (for all Id of Model (Id_To_Waypoint) =>
-           Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
-        Element (Model (Id_To_Waypoint), Id)))
+        Contains (WaypointList, WP_Sequences.First, Last (WaypointList),
+                  Element (Id_To_Waypoint, Id)))
    with Ghost, Global => null;
 
    function Has_Same_Keys
      (M : Pos64_WP_Map;
       N : Pos64_Nat64_Map) return Boolean
    is
-     ((for all I of Model (M) => Contains (Model (N), I)) and then
-        (for all I of Model (N) => Contains (Model (M), I)))
+     ((for all I of Model (M) => Contains (N, I)) and then
+        (for all I of Model (N) => Contains (M, I)))
    with Ghost, Global => null;
 
    function Elements_Are_Unique
@@ -100,7 +106,11 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
         (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
              (if I /= J then
-                   Element (Model (V), I) /= Element (Model (V), J))))
+                   Element (V, I) /= Element (V, J))))
+     --  (for all I in First_Index (V) .. Last_Index (V) =>
+     --     (for all J in V =>
+     --          (if I /= J then
+     --                Element (Model (V), I) /= Element (Model (V), J))))
      with Ghost, Global => null;
 
    function Id_Keys_Match_Waypoint_Ids
@@ -108,39 +118,39 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
    is
      (for all Id of Model (Id_To_Next_Id) =>
-           Contains (Model (Id_To_Waypoint), Id) and then
-      Element (Model (Id_To_Next_Id), Id) =
-        Element (Model (Id_To_Waypoint), Id).NextWaypoint)
+           Contains (Id_To_Waypoint, Id) and then
+      Element (Id_To_Next_Id, Id) =
+        Element (Id_To_Waypoint, Id).NextWaypoint)
    with Ghost, Global => null;
 
    function Is_Subsegment_Of_Path_With_Cycle
      (Segment : Pos64_Vector;
-      Segment_Index : Vector_Index;
       Path : Pos64_Vector;
+      Current_Index : Vector_Index;
       Cycle_Index : Vector_Index) return Boolean
    is
      (for all I in 1 .. Last_Index (Segment) =>
-          (if Segment_Index + I - 1 <= Last_Index (Path) then
-              Element (Segment, I) = Element (Path, I + Segment_Index - 1)
+          (if Current_Index + I - 1 <= Last_Index (Path) then
+              Element (Segment, I) = Element (Path, I + Current_Index - 1)
            else
               Element (Segment, I) =
-                 Element (Path, (Segment_Index + I - 1 - Last_Index (Path) - 1) mod
+                 Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
                     (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index)))
    with
      Ghost,
      Pre =>
        Last_Index (Path) <= Integer (Max) and
        Cycle_Index in 1 .. Last_Index (Path) - 1 and
-       Segment_Index in 1 .. Last_Index (Path) and
+       Current_Index in 1 .. Last_Index (Path) and
        Last_Index (Segment) <= Integer (Max);
 
    function Elements_Are_Successors
      (Id_To_Next_Id : Pos64_Nat64_Map;
       Path : Pos64_Vector) return Boolean
    is
-     (for all I in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (Path)) - 1 =>
-         Successor (Model (Id_To_Next_Id), Element (Model (Path), I)) =
-        Element (Model (Path), I + 1))
+     (for all I in First_Index (Path) .. Last_Index (Path) - 1 =>
+        Successor (Id_To_Next_Id, Element (Path, I)) =
+          Element (Path, I + 1))
    with
      Ghost,
      Pre =>
@@ -151,9 +161,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      (FirstWaypoint : Pos64;
       Path : Pos64_Vector) return Boolean
    is
-     (Element (Model (Path), 1) = FirstWaypoint or else
+     (Element (Path, 1) = FirstWaypoint or else
         (Length (Path) > 1 and then
-         Element (Model (Path), 2) = FirstWaypoint))
+         Element (Path, 2) = FirstWaypoint))
    with
      Ghost, Pre => Length (Path) > 0;
 
@@ -169,7 +179,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      Pre =>
        Length (Path) > 0 and then
        (for all Id of Model (Path) =>
-          Contains (Model (Id_To_Next_Id), Id));
+          Contains (Id_To_Next_Id, Id));
 
    function Cycle_Index_Is_Valid
      (Cycle_Index : Vector_Index;
@@ -184,31 +194,31 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      Pre =>
        Length (Path) > 0 and then
        (for all Id of Model (Path) =>
-          Contains (Model (Id_To_Next_Id), Id));
+          Contains (Id_To_Next_Id, Id));
 
    function Is_Subsegment_Of_Path_Without_Cycle
      (Segment : Pos64_Vector;
-      Segment_Index : Vector_Index;
+      Current_Index : Vector_Index;
       Path : Pos64_Vector) return Boolean
    is
      (for all I in 1 .. Last_Index (Segment) =>
-           Element (Segment, I) = Element (Path, Segment_Index + I - 1))
+           Element (Segment, I) = Element (Path, Current_Index + I - 1))
    with
      Ghost,
      Pre =>
-       Segment_Index in 1 .. Last_Index (Path)
-           and then Integer (Length (Segment)) <=
-             Integer (Length (Path)) - Segment_Index + 1;
+       Current_Index in 1 .. Last_Index (Path)
+       and then Integer (Length (Segment)) <=
+                  Integer (Length (Path)) - Current_Index + 1;
 
    function Remaining_Path_Length
      (Path : Pos64_Vector;
-      Segment_Index : Vector_Index) return Positive
+      Current_Index : Vector_Index) return Positive
    is
-     (Positive (Length (Path)) - Segment_Index + 1)
+     (Positive (Length (Path)) - Current_Index + 1)
    with
      Ghost,
      Pre =>
-       Integer (Length (Path)) >= Segment_Index;
+       Integer (Length (Path)) >= Current_Index;
 
    function Next_Segment_Will_Overlap_Current_Segment
      (Path : Pos64_Vector;
@@ -327,7 +337,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
               Positive (Length (State.Segment)) = Integer (Config.NumberWaypointsToServe) and then
               -- Is subsegment of path with cycle
               Is_Subsegment_Of_Path_With_Cycle
-                (State.Segment, State.Next_Index'Old, State.Path, State.Cycle_Index) and then
+                (State.Segment, State.Path, State.Next_Index'Old, State.Cycle_Index) and then
               State.Next_Index in 1 .. Pos_Vec_M.Last (Model (State.Path)) and then
               -- Element in current segment overlap matches next planned segment start
               Element (Model (State.Segment), Pos_Vec_M.Last (Model (State.Segment)) - Integer (Config.NumberWaypointsOverlap) + 1) =
