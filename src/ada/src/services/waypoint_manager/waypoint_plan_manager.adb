@@ -39,13 +39,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       for I in WP_Sequences.First .. Last (WaypointList) loop
          WP := Get (WaypointList, I);
          if WP.Number > 0 and then WP.NextWaypoint >= 0 then
-            if not Contains (Id_To_Waypoint, Pos64 (WP.Number)) and then
-              not Contains (Id_To_Next_Id, Pos64 (WP.Number))
-            then
+            if not Contains (Id_To_Waypoint, Pos64 (WP.Number)) then
                Insert (Id_To_Waypoint, Pos64 (WP.Number), WP);
                Insert (Id_To_Next_Id, Pos64 (WP.Number), Nat64 (WP.NextWaypoint));
-               pragma Assert
-                 (Waypoints_Are_Subset (Id_To_Waypoint, WaypointList));
             end if;
          end if;
 
@@ -169,7 +165,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       MC : MissionCommand)
    is
       First_Id : constant Pos64 := MC.FirstWaypoint;
-      Id_List : Pos64_Vector;
    begin
 
       -- Initialize relevant values of the state
@@ -179,13 +174,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Clear (State.Path);
       State.Next_Index := 0;
       State.Cycle_Index := 0;
+      State.Next_First_Id := 0;
       Extract_MissionCommand_Maps
         (State.MC.WaypointList, State.Id_To_Waypoint, State.Id_To_Next_Id);
 
       -- Check whether the first waypoint ID can be found in the map of valid
       -- waypoint IDs. If not, return.
       if not Contains (State.Id_To_Next_Id, First_Id) then
-         State.Next_First_Id := 0;
          return;
       end if;
 
@@ -233,7 +228,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          and then Desired_Length in Overlap + 1 .. Positive (Max),
        Post =>
          Element (Segment, 1) = Element (Path, Current_Index)
-         and then (for all Id of Model (Segment) => Contains (Path, Id))
          and then
              (if Cycle_Index > 0 then
                 Positive (Length (Segment)) = Desired_Length
@@ -300,8 +294,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             pragma Loop_Invariant
               (Is_Subsegment_Of_Path_With_Cycle
                  (Segment, Path, Current_Index, Cycle_Index));
-            pragma Loop_Invariant
-              (for all Id of Model (Segment) => Contains (Path, Id));
             pragma Loop_Invariant (Last_Index (Segment) = I - 1);
 
             Append (Segment, Element (Path, Ind));
@@ -340,8 +332,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             pragma Loop_Invariant (Element (Segment, 1) =
                                      Element (Path, Current_Index));
             pragma Loop_Invariant
-              (for all Id of Model (Segment) => Contains (Path, Id));
-            pragma Loop_Invariant
               (for all J in 1 .. Last_Index (Segment) =>
                    Element (Segment, J) =
                    Element (Path, Current_Index + J - 1));
@@ -370,14 +360,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Config : Waypoint_Plan_Manager_Configuration_Data;
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
    is
-      Len : constant Positive := Positive (Config.NumberWaypointsToServe);
-      Overlap : constant Positive := Positive (Config.NumberWaypointsOverlap);
       New_Path_Index : Ext_Vector_Index;
       New_First_Id : Nat64;
-
-      use Pos64_Vectors.Formal_Model;
-      use Pos64_Vectors.Formal_Model.M;
-      use all type Pos64_Vectors.Formal_Model.M.Sequence;
    begin
 
       Clear (State.Segment);
@@ -386,45 +370,45 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           State.Cycle_Index,
                           State.Next_Index,
                           Positive (Config.NumberWaypointsToServe),
-                          Overlap,
+                          Positive (Config.NumberWaypointsOverlap),
                           State.Segment,
                           New_Path_Index,
                           New_First_Id);
 
       declare
          MC_Out : MissionCommand := State.MC;
-      --     WP_List : WP_Seq;
-      --     Id : Pos64;
-      --     WP : Waypoint;
+         --  WP_List : WP_Seq;
+         --  Id : Pos64;
+         --  WP : Waypoint;
       begin
-      --     -- MC_Out.FirstWaypoint := First_Id;
-      --     MC_Out.FirstWaypoint :=
-      --       (if Length (State.Segment) > 1
-      --        then Element (State.Segment, 2)
-      --        else Element (State.Segment, 1));
-      --     for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
-      --        Id := Element (State.Segment, I);
-      --        --if Contains (State.Id_To_Waypoint, Id) then
-      --           WP := Element (State.Id_To_Waypoint, Id);
-      --           if I = Last_Index (State.Segment) then
-      --              WP.NextWaypoint := WP.Number;
-      --              -- TODO: Extend SPARK messages to handle
-      --              -- VehicleAction -> NavigationAction -> LoiterAction
-      --              -- VehicleAction -> PayloadAction -> GimbalAngleAction
-      --           end if;
-      --           -- WP.TurnType := Config.TurnType;
-      --           WP_List := Add (WP_List, WP);
-      --        --end if;
-      --        pragma Loop_Invariant
-      --          (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
-      --     end loop;
-      --     MC_Out.WaypointList := WP_List;
+         --  -- MC_Out.FirstWaypoint := First_Id;
+         --  MC_Out.FirstWaypoint :=
+         --    (if Length (State.Segment) > 1
+         --     then Element (State.Segment, 2)
+         --     else Element (State.Segment, 1));
+         --  for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
+         --     Id := Element (State.Segment, I);
+         --     --if Contains (State.Id_To_Waypoint, Id) then
+         --        WP := Element (State.Id_To_Waypoint, Id);
+         --        if I = Last_Index (State.Segment) then
+         --           WP.NextWaypoint := WP.Number;
+         --           -- TODO: Extend SPARK messages to handle
+         --           -- VehicleAction -> NavigationAction -> LoiterAction
+         --           -- VehicleAction -> PayloadAction -> GimbalAngleAction
+         --        end if;
+         --        -- WP.TurnType := Config.TurnType;
+         --        WP_List := Add (WP_List, WP);
+         --     --end if;
+         --     pragma Loop_Invariant
+         --       (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
+         --  end loop;
+         --  MC_Out.WaypointList := WP_List;
          sendBroadcastMessage (Mailbox, MC_Out);
       end;
 
-      State.New_Command := False;
       State.Next_Index := New_Path_Index;
       State.Next_First_Id := New_First_Id;
+      State.New_Command := False;
 
    end Produce_Segment;
 

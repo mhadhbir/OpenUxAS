@@ -1,6 +1,5 @@
 with SPARK.Containers.Formal.Hashed_Maps;
 with SPARK.Containers.Formal.Vectors;
-with SPARK.Containers.Functional.Maps;
 
 with Ada.Containers;                             use all type Ada.Containers.Count_Type;
 with Waypoint_Plan_Manager_Communication;        use Waypoint_Plan_Manager_Communication;
@@ -36,7 +35,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      Pos64_Nat64_Maps.Map (Max, Pos64_Nat64_Maps.Default_Modulus (Max));
 
    package Pos64_Vectors is new SPARK.Containers.Formal.Vectors (Positive, Pos64);
-   subtype Pos64_Vector is Pos64_Vectors.Vector (Max + 1);
+   subtype Pos64_Vector is Pos64_Vectors.Vector (Max);
    package Pos_Vec_M renames Pos64_Vectors.Formal_Model.M;
    use Pos64_Vectors;
 
@@ -107,10 +106,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         (for all J in Pos_Vec_M.First .. Pos_Vec_M.Last (Model (V)) =>
              (if I /= J then
                    Element (V, I) /= Element (V, J))))
-     --  (for all I in First_Index (V) .. Last_Index (V) =>
-     --     (for all J in V =>
-     --          (if I /= J then
-     --                Element (Model (V), I) /= Element (Model (V), J))))
      with Ghost, Global => null;
 
    function Id_Keys_Match_Waypoint_Ids
@@ -300,6 +295,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          Elements_Are_Unique (State.Path) and then
          State.Next_Index in 1 .. Last_Index (State.Path) and then
          State.Cycle_Index in 0 .. Last_Index (State.Path) - 1 and then
+         (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id))
+         and then
          (if State.New_Command then
             State.Next_Index = 1 and then
             State.Next_First_Id = State.MC.FirstWaypoint and then
@@ -316,8 +313,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                     State.Next_First_Id
                 else
                   Element (Model (State.Path), State.Cycle_Index) =
-                    State.Next_First_Id))) and then
-         (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id)),
+                    State.Next_First_Id))),
        Post =>
          State'Old.MC = State.MC
          and then State'Old.Id_To_Waypoint = State.Id_To_Waypoint
@@ -328,8 +324,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          and then State.New_Command = False
          and then Element (State.Segment, 1) =
                     Element (State.Path, State'Old.Next_Index)
-         and then (for all Id of Model (State.Segment) =>
-                     Contains (State.Path, Id))
          and then
            (if State.Cycle_Index > 0 then
               Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
