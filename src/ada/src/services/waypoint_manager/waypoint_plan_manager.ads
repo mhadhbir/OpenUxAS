@@ -91,6 +91,25 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                   Element (Id_To_Waypoint, Id)))
    with Ghost, Global => null;
 
+   -- The following is the "platinum" version of Waypoints_Are_Subset.
+   -- It is currently unused. It seems to be too complex for the provers to
+   -- reason about in the full context of Extract_MissionCommand_Maps.
+   function Waypoints_Are_Full_Subset
+     (Id_To_Waypoint : Pos64_WP_Map;
+      WaypointList : WP_Seq) return Boolean
+   is
+     (for all I in WP_Sequences.First .. Last (WaypointList) =>
+          (if Get (WaypointList, I).Number > 0
+              and then Get (WaypointList, I).NextWaypoint >= 0 and then
+             (for all J in WP_Sequences.First .. I - 1 =>
+                (Get (WaypointList, J).Number /= Get (WaypointList, I).Number
+                 or else Get (WaypointList, J).NextWaypoint < 0))
+           then
+             (Contains (Id_To_Waypoint, Get (WaypointList, I).Number) and then
+              Element (Id_To_Waypoint, Get (WaypointList, I).Number) =
+                Get (WaypointList, I))))
+   with Ghost, Global => null;
+
    function Has_Same_Keys
      (M : Pos64_WP_Map;
       N : Pos64_Nat64_Map) return Boolean
@@ -125,12 +144,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Cycle_Index : Vector_Index) return Boolean
    is
      (for all I in 1 .. Last_Index (Segment) =>
-          (if Current_Index + I - 1 <= Last_Index (Path) then
-              Element (Segment, I) = Element (Path, I + Current_Index - 1)
-           else
-              Element (Segment, I) =
-                 Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
-                    (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index)))
+        (if Current_Index + I - 1 <= Last_Index (Path) then
+           Element (Segment, I) = Element (Path, I + Current_Index - 1)
+         else
+           Element (Segment, I) =
+             Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
+               (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index)))
    with
      Ghost,
      Pre =>
@@ -160,7 +179,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         (Length (Path) > 1 and then
          Element (Path, 2) = FirstWaypoint))
    with
-     Ghost, Pre => Length (Path) > 0;
+     Ghost,
+     Pre => Length (Path) > 0;
 
    function Path_Has_Cycle
      (Id_To_Next_Id : Pos64_Nat64_Map;
@@ -170,7 +190,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Contains (Path, Successor (Id_To_Next_Id, Last_Element (Path))) and then
       Successor (Id_To_Next_Id, Last_Element (Path)) /= Last_Element (Path))
    with
-     -- Ghost,
      Pre =>
        Length (Path) > 0 and then
        (for all Id of Model (Path) =>
@@ -362,56 +381,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                    Remaining_Path_Length (State.Path, State.Next_Index'Old)
                  and then State.Next_Index = 0
                  and then State.Next_First_Id = 0));
-
-   procedure Lemma_Map_Still_Contains_List_After_Append
-     (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vector;
-      New_Item : Pos64)
-     with Ghost,
-       Pre =>
-         Length (L_Old) < Capacity (L_Old) and then
-         Length (L_New) = Length (L_Old) + 1 and then
-         Model (L_Old) < Model (L_New) and then
-         Element (L_New, Last_Index (L_Old) + 1) = New_Item and then
-         Contains (M, New_Item) and then
-         (for all Item of Model (L_Old) => Contains (M, Item)),
-       Post =>
-         (for all Item of Model (L_New) => Contains (M, Item));
-
-   procedure Lemma_First_Element_Unchanged_After_Append
-     (V_Old, V_New : Pos64_Vector;
-      First_Item : Pos64;
-      New_Item : Pos64)
-     with Ghost,
-     Pre =>
-       Length (V_Old) >= 1 and then
-       Length (V_Old) < Capacity (V_Old) and then
-       Length (V_New) = Length (V_Old) + 1 and then
-       Model (V_Old) < Model (V_New) and then
-       Element (Model (V_Old), 1) = First_Item and then
-       Element (Model (V_New), Last_Index (V_Old) + 1) = New_Item,
-     Post =>
-       Element (Model (V_New), 1) = First_Item;
-
-   procedure Lemma_List_Still_Linked_After_Append
-     (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vector;
-      New_Item : Pos64)
-     with
-       Ghost,
-       Pre =>
-         Length (L_Old) < Capacity (L_Old) and then
-         not Is_Empty (L_Old) and then
-         Length (L_New) = Length (L_Old) + 1 and then
-         Model (L_Old) < Model (L_New) and then
-         Element (L_New, Last_Index (L_Old) + 1) = New_Item and then
-         (for all Item of Model (L_Old) => Contains (M, Item)) and then
-         Element (M, Element (L_Old, Last_Index (L_Old))) = New_Item and then
-         (for all I in First_Index (L_Old) .. Last_Index (L_Old) - 1 =>
-            Element (M, Element (L_Old, I)) = Element (L_Old, I + 1)),
-       Post =>
-         (for all I in First_Index (L_New) .. Last_Index (L_New) - 1 =>
-            Element (M, Element (L_New, I)) = Element (L_New, I + 1));
 
 private
 

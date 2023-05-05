@@ -55,6 +55,19 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
          pragma Loop_Invariant
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
+         -- Below proves with "prove line" but not with "prove subprogram"
+         --  pragma Loop_Invariant
+         --    (for all K in WP_Sequences.First .. I =>
+         --       (if Get (WaypointList, K).Number > 0
+         --          and then Get (WaypointList, K).NextWaypoint >= 0
+         --          and then
+         --            (for all J in WP_Sequences.First .. K - 1 =>
+         --               (Get (WaypointList, J).Number /= Get (WaypointList, K).Number
+         --                or else Get (WaypointList, J).NextWaypoint < 0))
+         --        then
+         --          (Contains (Id_To_Waypoint, Get (WaypointList, K).Number) and then
+         --           Element (Id_To_Waypoint, Get (WaypointList, K).Number) =
+         --             Get (WaypointList, K))));
       end loop;
 
    end Extract_MissionCommand_Maps;
@@ -71,21 +84,22 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Cycle_Index : out Ext_Vector_Index)
      with
        Pre =>
-         Is_Empty (Path) and then
-         not Is_Empty (Id_To_Next_Id) and then
-         Contains (Id_To_Next_Id, First_Id),
+         Is_Empty (Path)
+         and then not Is_Empty (Id_To_Next_Id)
+         and then Contains (Id_To_Next_Id, First_Id),
        Post =>
-         Next_Index = 1 and then
-         not Is_Empty (Path) and then
-         Next_Index <= Last_Index (Path) and then
-         FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path) and then
-         (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id)) and then
-         Elements_Are_Unique (Path) and then
-         Elements_Are_Successors (Id_To_Next_Id, Path) and then
-         (if Path_Has_Cycle (Id_To_Next_Id, Path) then
-            Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
-          else
-            Cycle_Index = 0);
+         Next_Index = 1
+         and then not Is_Empty (Path)
+         and then Next_Index <= Last_Index (Path)
+         and then FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path)
+         and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
+         and then Elements_Are_Unique (Path)
+         and then Elements_Are_Successors (Id_To_Next_Id, Path)
+         and then (if Path_Has_Cycle (Id_To_Next_Id, Path)
+                   then
+                     Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
+                   else
+                     Cycle_Index = 0);
 
    procedure Construct_Path
      (First_Id : Pos64;
@@ -217,40 +231,42 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Segment : in out Pos64_Vector;
       Next_Index : out Ext_Vector_Index;
       Next_First_Id : out Nat64)
-     with
-       Pre =>
-         Is_Empty (Segment)
-         and then Length (Path) > 0
-         and then Last_Index (Path) <= Positive (Max)
-         and then Current_Index in 1 .. Last_Index (Path)
-         and then Cycle_Index in 0 .. Last_Index (Path) - 1
-         and then Overlap in 2 .. Positive (Max) - 1
-         and then Desired_Length in Overlap + 1 .. Positive (Max),
-       Post =>
-         Element (Segment, 1) = Element (Path, Current_Index)
-         and then
-             (if Cycle_Index > 0 then
-                Positive (Length (Segment)) = Desired_Length
-                and then Is_Subsegment_Of_Path_With_Cycle
-                           (Segment, Path, Current_Index, Cycle_Index)
-                and then Next_Index in 1 .. Last (Model (Path))
-                and then Next_Segment_Will_Overlap_Current_Segment
-                           (Path, Next_Index, Segment, Overlap)
-                and then Next_First_Id_Will_Be_Element_After_Next_Index
-                           (Next_First_Id, Next_Index, Cycle_Index, Path)
-          else
-            Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path) and then
-            (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
-             then
-               Positive (Length (Segment)) = Desired_Length and then
-               (if Last_Index (Path) = Last_Index (Segment) then
-                  Next_Index = 0 and then Next_First_Id = 0
-                else
-                  Next_Index = Current_Index + Desired_Length - Overlap and then
-                  Next_Segment_Will_Overlap_Current_Segment
-                    (Path, Next_Index, Segment, Overlap) and then
-                  Next_First_Id_Will_Be_Element_After_Next_Index
-                    (Next_First_Id, Next_Index, Cycle_Index, Path))
+    with
+      Pre =>
+        Is_Empty (Segment)
+        and then Length (Path) > 0
+        and then Last_Index (Path) <= Positive (Max)
+        and then Current_Index in 1 .. Last_Index (Path)
+        and then Cycle_Index in 0 .. Last_Index (Path) - 1
+        and then Overlap in 2 .. Positive (Max) - 1
+        and then Desired_Length in Overlap + 1 .. Positive (Max),
+      Post =>
+        Element (Segment, 1) = Element (Path, Current_Index)
+        and then
+        (if Cycle_Index > 0 then
+           Positive (Length (Segment)) = Desired_Length
+           and then Is_Subsegment_Of_Path_With_Cycle
+                      (Segment, Path, Current_Index, Cycle_Index)
+           and then Next_Index in 1 .. Last (Model (Path))
+           and then Next_Segment_Will_Overlap_Current_Segment
+                      (Path, Next_Index, Segment, Overlap)
+           and then Next_First_Id_Will_Be_Element_After_Next_Index
+                      (Next_First_Id, Next_Index, Cycle_Index, Path)
+         else
+           Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path)
+           and then
+           (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
+            then
+              Positive (Length (Segment)) = Desired_Length
+              and then
+              (if Last_Index (Path) = Last_Index (Segment) then
+                 Next_Index = 0 and then Next_First_Id = 0
+               else
+                 Next_Index = Current_Index + Desired_Length - Overlap
+                 and then Next_Segment_Will_Overlap_Current_Segment
+                   (Path, Next_Index, Segment, Overlap)
+                 and then Next_First_Id_Will_Be_Element_After_Next_Index
+                   (Next_First_Id, Next_Index, Cycle_Index, Path))
              else
                Positive (Length (Segment)) =
                  Remaining_Path_Length (Path, Current_Index)
@@ -381,14 +397,13 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          --  Id : Pos64;
          --  WP : Waypoint;
       begin
-         --  -- MC_Out.FirstWaypoint := First_Id;
          --  MC_Out.FirstWaypoint :=
          --    (if Length (State.Segment) > 1
          --     then Element (State.Segment, 2)
          --     else Element (State.Segment, 1));
          --  for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
          --     Id := Element (State.Segment, I);
-         --     --if Contains (State.Id_To_Waypoint, Id) then
+         --     if Contains (State.Id_To_Waypoint, Id) then
          --        WP := Element (State.Id_To_Waypoint, Id);
          --        if I = Last_Index (State.Segment) then
          --           WP.NextWaypoint := WP.Number;
@@ -398,7 +413,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          --        end if;
          --        -- WP.TurnType := Config.TurnType;
          --        WP_List := Add (WP_List, WP);
-         --     --end if;
+         --     end if;
          --     pragma Loop_Invariant
          --       (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
          --  end loop;
@@ -411,32 +426,5 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       State.New_Command := False;
 
    end Produce_Segment;
-
-   procedure Lemma_Map_Still_Contains_List_After_Append
-     (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vector;
-      New_Item : Pos64)
-   is
-   begin
-      null;
-   end Lemma_Map_Still_Contains_List_After_Append;
-
-   procedure Lemma_List_Still_Linked_After_Append
-     (M : Pos64_Nat64_Map;
-      L_Old, L_New : Pos64_Vector;
-      New_Item : Pos64)
-   is
-   begin
-      null;
-   end Lemma_List_Still_Linked_After_Append;
-
-   procedure Lemma_First_Element_Unchanged_After_Append
-     (V_Old, V_New : Pos64_Vector;
-      First_Item : Pos64;
-      New_Item : Pos64)
-   is
-   begin
-      null;
-   end Lemma_First_Element_Unchanged_After_Append;
 
 end Waypoint_Plan_Manager;
