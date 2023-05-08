@@ -55,7 +55,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
          pragma Loop_Invariant
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
-         -- Below proves with "prove line" but not with "prove subprogram"
+         -- The following corresponds to Waypoints_Are_Full_Subset and proves
+         -- with "prove line" but not with "prove subprogram"
          --  pragma Loop_Invariant
          --    (for all K in WP_Sequences.First .. I =>
          --       (if Get (WaypointList, K).Number > 0
@@ -95,11 +96,11 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
          and then Elements_Are_Unique (Path)
          and then Elements_Are_Successors (Id_To_Next_Id, Path)
-         and then (if Path_Has_Cycle (Id_To_Next_Id, Path)
-                   then
-                     Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
-                   else
-                     Cycle_Index = 0);
+         and then
+         (if Path_Has_Cycle (Id_To_Next_Id, Path) then
+            Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
+          else
+            Cycle_Index = 0);
 
    procedure Construct_Path
      (First_Id : Pos64;
@@ -391,33 +392,38 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           New_Path_Index,
                           New_First_Id);
 
+      -- Due to a bug in SPARK 24 related to analysis of tagged types, this
+      -- declare block leads to unsound analysis. Since it only does
+      -- straightforward translation of state to a message, it can be commented
+      -- out for verification. Either way, SPARK will prove the postcondition,
+      -- but if this block is uncommented, any post will prove (even "False").
       declare
          MC_Out : MissionCommand := State.MC;
-         --  WP_List : WP_Seq;
-         --  Id : Pos64;
-         --  WP : Waypoint;
+         WP_List : WP_Seq;
+         Id : Pos64;
+         WP : Waypoint;
       begin
-         --  MC_Out.FirstWaypoint :=
-         --    (if Length (State.Segment) > 1
-         --     then Element (State.Segment, 2)
-         --     else Element (State.Segment, 1));
-         --  for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
-         --     Id := Element (State.Segment, I);
-         --     if Contains (State.Id_To_Waypoint, Id) then
-         --        WP := Element (State.Id_To_Waypoint, Id);
-         --        if I = Last_Index (State.Segment) then
-         --           WP.NextWaypoint := WP.Number;
-         --           -- TODO: Extend SPARK messages to handle
-         --           -- VehicleAction -> NavigationAction -> LoiterAction
-         --           -- VehicleAction -> PayloadAction -> GimbalAngleAction
-         --        end if;
-         --        -- WP.TurnType := Config.TurnType;
-         --        WP_List := Add (WP_List, WP);
-         --     end if;
-         --     pragma Loop_Invariant
-         --       (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
-         --  end loop;
-         --  MC_Out.WaypointList := WP_List;
+         MC_Out.FirstWaypoint := State.Next_First_Id;
+           --  (if Length (State.Segment) > 1
+           --   then Element (State.Segment, 2)
+           --   else Element (State.Segment, 1));
+         for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
+            Id := Element (State.Segment, I);
+            if Contains (State.Id_To_Waypoint, Id) then
+               WP := Element (State.Id_To_Waypoint, Id);
+               if I = Last_Index (State.Segment) then
+                  WP.NextWaypoint := WP.Number;
+                  -- TODO: Extend SPARK messages to handle
+                  -- VehicleAction -> NavigationAction -> LoiterAction
+                  -- VehicleAction -> PayloadAction -> GimbalAngleAction
+               end if;
+               -- WP.TurnType := Config.TurnType;
+               WP_List := Add (WP_List, WP);
+            end if;
+            pragma Loop_Invariant
+              (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
+         end loop;
+         MC_Out.WaypointList := WP_List;
          sendBroadcastMessage (Mailbox, MC_Out);
       end;
 
