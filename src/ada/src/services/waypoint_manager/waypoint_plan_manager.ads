@@ -287,8 +287,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       MC : MissionCommand)
      with
        Pre =>
-         Length (MC.WaypointList) <= Max and then
-         MC.FirstWaypoint > 0,
+         Length (MC.WaypointList) <= Max
+         and then MC.FirstWaypoint > 0,
        Post =>
          State.MC = MC
          and then Waypoints_Are_Subset (State.Id_To_Waypoint, State.MC.WaypointList)
@@ -365,12 +365,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                          (State.Segment, State.Path,
                           State.Next_Index'Old, State.Cycle_Index)
               and then State.Next_Index in 1 .. Last_Index (State.Path)
-              and then Next_Segment_Will_Overlap_Current_Segment
-                         (State.Path, State.Next_Index,
-                          State.Segment, Positive (Config.NumberWaypointsOverlap))
               and then Next_First_Id_Will_Be_Element_After_Next_Index
                          (State.Next_First_Id, State.Next_Index,
                           State.Cycle_Index, State.Path)
+              and then Next_Segment_Will_Overlap_Current_Segment
+                         (State.Path, State.Next_Index,
+                          State.Segment, Positive (Config.NumberWaypointsOverlap))
           else
             Is_Subsegment_Of_Path_Without_Cycle
               (State.Segment, State.Next_Index'Old, State.Path)

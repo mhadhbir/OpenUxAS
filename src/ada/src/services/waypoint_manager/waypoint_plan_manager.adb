@@ -21,9 +21,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre => Length (WaypointList) <= Max,
      Post =>
-       Waypoints_Are_Subset (Id_To_Waypoint, WaypointList) and then
-       Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id) and then
-       Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
+       Waypoints_Are_Subset (Id_To_Waypoint, WaypointList)
+       and then Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id)
+       and then Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
    procedure Extract_MissionCommand_Maps
      (WaypointList : WP_Seq;
@@ -404,9 +404,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          WP : Waypoint;
       begin
          MC_Out.FirstWaypoint := State.Next_First_Id;
-           --  (if Length (State.Segment) > 1
-           --   then Element (State.Segment, 2)
-           --   else Element (State.Segment, 1));
          for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
             Id := Element (State.Segment, I);
             if Contains (State.Id_To_Waypoint, Id) then
