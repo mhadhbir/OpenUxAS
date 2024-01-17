@@ -1,3 +1,4 @@
+with SPARK.Big_Integers;                         use SPARK.Big_Integers;
 with SPARK.Containers.Formal.Hashed_Maps;
 with SPARK.Containers.Formal.Vectors;
 
