@@ -11,11 +11,6 @@ package body Plan_Builder with SPARK_Mode is
 
    pragma Assertion_Policy (Ignore);
 
-   --  Subprograms wraping insertion and deletion in m_pendingRoute. They
-   --  restate part of the postcondition of the callee, but also reestablish
-   --  the predicate of Route_Aggregator_State and compute the effect of the
-   --  modification on Plan_To_Route.
-
    -----------------------
    -- Local subprograms --
    -----------------------
@@ -82,11 +77,11 @@ package body Plan_Builder with SPARK_Mode is
       In_Progress_Response.ResponseID := Request_Id;
       Insert (State.m_inProgressResponse, Request_Id, In_Progress_Response);
 
-      if Length (Corresponding_Automation_Request.EntityList) = 0 then
-         for S of State.m_currentEntityStates loop
-            Corresponding_Automation_Request.EntityList := Add (Corresponding_Automation_Request.EntityList, S);
-         end loop;
-      end if;
+      -- if Length (Corresponding_Automation_Request.EntityList) = 0 then
+      --   for S of State.m_currentEntityStates loop
+      --      Corresponding_Automation_Request.EntityList := Add (Corresponding_Automation_Request.EntityList, S);
+      --   end loop;
+      -- end if; -- This loop does not make sense beacuse a few lines earlier we send an error message if this case is true.
 
       declare
          Projected_States : ProjectedState_Seq;
@@ -136,6 +131,7 @@ package body Plan_Builder with SPARK_Mode is
       Config : in out Plan_Builder_Configuration_Data)
    is
    begin
+
       if Contains (State.m_uniqueAutomationRequests, Unique_Request_Id) then
          if Length (Element (State.m_remainingAssignments, Unique_Request_Id)) = 0 then
             return;
@@ -165,6 +161,7 @@ package body Plan_Builder with SPARK_Mode is
             taskImplementationRequest.StartHeading := planState.State.PlanningHeading;
             taskImplementationRequest.StartPosition := planState.State.PlanningPosition;
             taskImplementationRequest.StartTime := planState.Time;
+
             for N in 1 .. Last (Get (State.m_projectedEntityStates, Unique_Request_Id)) loop
                pragma Loop_Invariant (Length (taskImplementationRequest.NeighborLocations) = To_Big_Integer (N - 1));
                taskImplementationRequest.NeighborLocations := Add (taskImplementationRequest.NeighborLocations,
@@ -198,7 +195,6 @@ package body Plan_Builder with SPARK_Mode is
       MissionCo_List : MissionCommand_Seq := Response_In_Progress.MissionCommandList;
       WP : LMCP_Messages.Waypoint;
    begin
-
       if Length (Received_Message.TaskWaypoints) = 0 then
          declare
             Error_Msg : Unbounded_String;
@@ -208,7 +204,7 @@ package body Plan_Builder with SPARK_Mode is
             Error_Msg := Error_Msg & To_Unbounded_String (" assigned to vehicle [" & Received_Message.VehicleID'Image & "]");
             Error_Msg := Error_Msg & To_Unbounded_String (" reported an empty waypoint list for implementation!");
             sendErrorMessage (Mailbox, Error_Msg);
-               
+
             pragma Assert (Contains (State.m_inProgressResponse, Unique_Request_Id) and then Contains (State.m_reqeustIDVsOverrides, Unique_Request_Id));
             Check_Next_Task_Implementation_Request (Unique_Request_Id, Mailbox, State, Config);
             return;
@@ -282,7 +278,49 @@ package body Plan_Builder with SPARK_Mode is
                   end loop;
                end;
             end loop;
+
+            declare 
+               mish : MissionCommand;
+            begin
+               mish.CommandId := Config.m_commandId;
+               Config.m_commandId := Config.m_commandId + 1;
+               mish.VehicleId := Received_Message.VehicleID;
+               mish.FirstWaypoint := Get (Received_Message.TaskWaypoints, WP_Sequences.First).Number;
+               for I in WP_Sequences.First .. Last (Received_Message.TaskWaypoints) loop
+                  mish.WaypointList := Add (mish.WaypointList, Get (Received_Message.TaskWaypoints, I));
+               end loop;
+               declare
+                  Response : UniqueAutomationResponse := Element (State.m_inProgressResponse, Unique_Request_Id);
+                  MissionCo_List : MissionCommand_Seq := Response.MissionCommandList;
+               begin
+                  MissionCo_List := Add (MissionCo_List, mish);
+                  Response.MissionCommandList := MissionCo_List;
+                  Replace (State.m_inProgressResponse, Unique_Request_Id, Response);
+               end;
+            end;
          end if;
+
+         if Has_Key (State.m_projectedEntityStates, Unique_Request_Id) then
+            declare
+               Seq : ProjectedState_Seq := Get (State.m_projectedEntityStates, Unique_Request_Id);
+               PS : ProjectedState;
+            begin
+               for I in 1 .. Last (Seq) loop
+                  if Get (Seq, I).State.EntityID = Received_Message.VehicleID then
+                     PS := Get (Get (State.m_projectedEntityStates, Unique_Request_Id), I);
+                     PS.FinalWaypointID := Get (Received_Message.TaskWaypoints, Last (Received_Message.TaskWaypoints)).Number;
+                     PS.Time := Received_Message.FinalTime;
+                     PS.State.PlanningPosition := Received_Message.FinalLocation;
+                     PS.State.PlanningHeading := Received_Message.FinalHeading;
+                     Seq := Set (Seq, I, PS);
+                     State.m_projectedEntityStates := Set (State.m_projectedEntityStates, Unique_Request_Id, Seq);
+                     exit;
+                  end if;
+               end loop;
+            end;
+         end if;
+
+         Check_Next_Task_Implementation_Request (Unique_Request_Id, Mailbox, State, Config);
       end;
    end Process_Task_Implementation_Response;
 
@@ -292,12 +330,10 @@ package body Plan_Builder with SPARK_Mode is
       State : in out Plan_Builder_State;
       Config : in out Plan_Builder_Configuration_Data)
    is
-      Response : UniqueAutomationResponse := Element (State.m_inProgressResponse, Unique_Request_Id);
       Service_Status : ServiceStatus;
       Key_Value_Pair : KeyValuePair;
       In_Progress_Response : UniqueAutomationResponse := Element (State.m_inProgressResponse, Unique_Request_Id);
    begin
-   
       if Contains (State.m_remainingAssignments, Unique_Request_Id) then
          if Length (Element (State.m_remainingAssignments, Unique_Request_Id)) = 0 then
             if Has_Key (State.m_projectedEntityStates, Unique_Request_Id) then
@@ -312,15 +348,15 @@ package body Plan_Builder with SPARK_Mode is
             end if;
 
             if Config.m_addLoiterToEndOfMission then
-               pragma Assert (Length (Response.MissionCommandList) /= 0 and then Length (Get (Response.MissionCommandList, Last (Response.MissionCommandList)).WaypointList) /= 0);
-               Add_Loiters_To_Mission_Commands (State, Config, Response);
+               pragma Assert (Length (In_Progress_Response.MissionCommandList) /= 0 and then Length (Get (In_Progress_Response.MissionCommandList, Last (In_Progress_Response.MissionCommandList)).WaypointList) /= 0);
+               Add_Loiters_To_Mission_Commands (State, Config, Unique_Request_Id);
             end if;
 
             if Config.m_overrideTurnType then
-               for J in MC_Sequences.First .. Last (Response.MissionCommandList) loop
-                  pragma Loop_Invariant (Length (Response.MissionCommandList)'Loop_Entry = Length (Response.MissionCommandList));
+               for J in MC_Sequences.First .. Last (In_Progress_Response.MissionCommandList) loop
+                  pragma Loop_Invariant (Length (In_Progress_Response.MissionCommandList)'Loop_Entry = Length (In_Progress_Response.MissionCommandList));
                   declare
-                     Mission : MissionCommand := Get (Response.MissionCommandList, J);
+                     Mission : MissionCommand := Get (In_Progress_Response.MissionCommandList, J);
                   begin
                      for I in Mission.WaypointList loop
                         declare
@@ -330,12 +366,12 @@ package body Plan_Builder with SPARK_Mode is
                            Mission.WaypointList := Set (Mission.WaypointList, I, WP);
                         end;
                      end loop;
-                     Response.MissionCommandList := Set (Response.MissionCommandList, J, Mission);
+                     In_Progress_Response.MissionCommandList := Set (In_Progress_Response.MissionCommandList, J, Mission);
                   end;
                end loop;
             end if;
 
-            sendBroadcastMessage (Mailbox, Response);
+            sendBroadcastMessage (Mailbox, In_Progress_Response);
 
             Delete (State.m_inProgressResponse, Unique_Request_Id);
             Delete (State.m_reqeustIDVsOverrides, Unique_Request_Id);
@@ -367,11 +403,12 @@ package body Plan_Builder with SPARK_Mode is
    -------------------------------------                                                                                                                                                                                                                     
 
    procedure Add_Loiters_To_Mission_Commands
-     (State : Plan_Builder_State;
+     (State : in out Plan_Builder_State;
       Config : Plan_Builder_Configuration_Data;
-      Response : in out UniqueAutomationResponse)
+      Unique_Request_Id : Int64)
    is
       Contains_Loiter : Boolean := False;
+      Response : UniqueAutomationResponse := Element (State.m_inProgressResponse, Unique_Request_Id);
       Command : MissionCommand := Get (Response.MissionCommandList, MC_Sequences.First);
       Target_Vehicle : Int64 := Command.VehicleId;
    begin
@@ -413,11 +450,11 @@ package body Plan_Builder with SPARK_Mode is
                Loiter_Action.Radius := Config.m_deafultLoiterRadius;
             end if;
             Loiter_Action.Location := (Back_El.Latitude, Back_El.Longitude, Back_El.Altitude, Back_El.AltitudeType);
-            --  Loiter_Action.Airspeed := Back_El.GroundSpeed;
             Back_El.VehicleActionList := Add (Back_El.VehicleActionList, Loiter_Action);
             Wp_List := Set (Wp_List, Last (Wp_List), Back_El);
             Last_Mission_Command.WaypointList := Wp_List;
             Response.MissionCommandList := Set (Response.MissionCommandList, Last (Response.MissionCommandList), Last_Mission_Command);
+            Replace (State.m_inProgressResponse, Unique_Request_Id, Response);
          end;
       end if;
    end Add_Loiters_To_Mission_Commands;
