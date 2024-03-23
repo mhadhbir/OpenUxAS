@@ -96,11 +96,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
          and then Elements_Are_Unique (Path)
          and then Elements_Are_Successors (Id_To_Next_Id, Path)
-         and then
-         (if Path_Has_Cycle (Id_To_Next_Id, Path) then
-            Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id)
-          else
-            Cycle_Index = 0);
+         and then Cycle_Index_Is_Valid (Cycle_Index, Id_To_Next_Id, Path);
 
    procedure Construct_Path
      (First_Id : Pos64;
@@ -137,7 +133,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Find_Index (Path,
                           Successor (Id_To_Next_Id, Last_Element (Path)));
             pragma Assert
-              (Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id));
+              (Non_Zero_Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id));
             return;
          elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0
            or else not
@@ -234,13 +230,10 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Next_First_Id : out Nat64)
     with
       Pre =>
-        Is_Empty (Segment)
-        and then Length (Path) > 0
-        and then Last_Index (Path) <= Positive (Max)
-        and then Current_Index in 1 .. Last_Index (Path)
-        and then Cycle_Index in 0 .. Last_Index (Path) - 1
-        and then Overlap in 2 .. Positive (Max) - 1
-        and then Desired_Length in Overlap + 1 .. Positive (Max),
+         Is_Empty (Segment) and then
+         Path_Is_Nonempty_And_Indices_Are_Valid (Path, Current_Index, Cycle_Index)
+         and then Overlap in 2 .. Positive (Max) - 1
+         and then Desired_Length in Overlap + 1 .. Positive (Max),
       Post =>
         Element (Segment, 1) = Element (Path, Current_Index)
         and then
