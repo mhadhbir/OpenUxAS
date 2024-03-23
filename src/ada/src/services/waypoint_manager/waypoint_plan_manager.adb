@@ -83,20 +83,20 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Path : in out Pos64_Vector;
       Next_Index : out Vector_Index;
       Cycle_Index : out Ext_Vector_Index)
-     with
-       Pre =>
-         Is_Empty (Path)
-         and then not Is_Empty (Id_To_Next_Id)
-         and then Contains (Id_To_Next_Id, First_Id),
-       Post =>
-         Next_Index = 1
-         and then not Is_Empty (Path)
-         and then Next_Index <= Last_Index (Path)
-         and then FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path)
-         and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
-         and then Elements_Are_Unique (Path)
-         and then Elements_Are_Successors (Id_To_Next_Id, Path)
-         and then Cycle_Index_Is_Valid (Cycle_Index, Id_To_Next_Id, Path);
+   with
+     Pre =>
+       Is_Empty (Path)
+       and then not Is_Empty (Id_To_Next_Id)
+       and then Contains (Id_To_Next_Id, First_Id),
+     Post =>
+       Next_Index = 1
+       and then not Is_Empty (Path)
+       and then Next_Index <= Last_Index (Path)
+       and then FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path)
+       and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
+       and then Elements_Are_Unique (Path)
+       and then Elements_Are_Successors (Id_To_Next_Id, Path)
+       and then Cycle_Index_Is_Valid (Cycle_Index, Id_To_Next_Id, Path);
 
    procedure Construct_Path
      (First_Id : Pos64;
@@ -228,43 +228,44 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       Segment : in out Pos64_Vector;
       Next_Index : out Ext_Vector_Index;
       Next_First_Id : out Nat64)
-    with
-      Pre =>
-         Is_Empty (Segment) and then
-         Path_Is_Nonempty_And_Indices_Are_Valid (Path, Current_Index, Cycle_Index)
-         and then Overlap in 2 .. Positive (Max) - 1
-         and then Desired_Length in Overlap + 1 .. Positive (Max),
-      Post =>
-        Element (Segment, 1) = Element (Path, Current_Index)
-        and then
-        (if Cycle_Index > 0 then
-           Positive (Length (Segment)) = Desired_Length
-           and then Is_Subsegment_Of_Path_With_Cycle
-                      (Segment, Path, Current_Index, Cycle_Index)
-           and then Next_Index in 1 .. Last (Model (Path))
-           and then Next_Segment_Will_Overlap_Current_Segment
+   with
+     Pre =>
+       Is_Empty (Segment)
+       and then Path_Is_Nonempty_And_Indices_Are_Valid
+                  (Path, Current_Index, Cycle_Index)
+       and then Overlap in 2 .. Positive (Max) - 1
+       and then Desired_Length in Overlap + 1 .. Positive (Max),
+     Post =>
+       Element (Segment, 1) = Element (Path, Current_Index)
+       and then
+       (if Cycle_Index > 0 then
+          Positive (Length (Segment)) = Desired_Length
+          and then Is_Subsegment_Of_Path_With_Cycle
+                     (Segment, Path, Current_Index, Cycle_Index)
+          and then Next_Index in 1 .. Last (Model (Path)) -- Next_Segment_Will_Be_Valid
+          and then Next_Segment_Will_Overlap_Current_Segment
                       (Path, Next_Index, Segment, Overlap)
-           and then Next_First_Id_Will_Be_Element_After_Next_Index
+          and then Next_First_Id_Will_Be_Element_After_Next_Index
                       (Next_First_Id, Next_Index, Cycle_Index, Path)
-         else
-           Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path)
-           and then
-           (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
-            then
-              Positive (Length (Segment)) = Desired_Length
-              and then
-              (if Last_Index (Path) = Last_Index (Segment) then
+        else
+          Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path)
+          and then
+          (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
+           then
+             Positive (Length (Segment)) = Desired_Length
+             and then
+             (if Last_Index (Path) = Last_Index (Segment) then
                  Next_Index = 0 and then Next_First_Id = 0
-               else
+              else
                  Next_Index = Current_Index + Desired_Length - Overlap
                  and then Next_Segment_Will_Overlap_Current_Segment
                    (Path, Next_Index, Segment, Overlap)
                  and then Next_First_Id_Will_Be_Element_After_Next_Index
                    (Next_First_Id, Next_Index, Cycle_Index, Path))
-             else
-               Positive (Length (Segment)) =
-                 Remaining_Path_Length (Path, Current_Index)
-               and then Next_Index = 0 and then Next_First_Id = 0));
+           else
+             Positive (Length (Segment)) =
+               Remaining_Path_Length (Path, Current_Index)
+             and then Next_Index = 0 and then Next_First_Id = 0));
 
    procedure Initialize_Segment
      (Path : Pos64_Vector;
