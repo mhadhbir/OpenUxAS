@@ -246,19 +246,19 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      Pre =>
        Integer (Length (Path)) >= Current_Index;
 
-   function Next_Segment_Will_Overlap_Current_Segment
-     (Path : Pos64_Vector;
-      Next_Index : Vector_Index;
-      Segment : Pos64_Vector;
-      Overlap : Positive) return Boolean
-   is
-     (Element (Segment, Last_Index (Segment) - Overlap + 1) =
-        Element (Path, Next_Index))
-   with
-     Ghost,
-     Pre =>
-       Integer (Length (Segment)) >= Overlap
-       and then Next_Index in 1 .. Last_Index (Path);
+--     function Next_Segment_Will_Overlap_Current_Segment
+--       (Path : Pos64_Vector;
+--        Next_Index : Vector_Index;
+--        Segment : Pos64_Vector;
+--        Overlap : Positive) return Boolean
+--     is
+--       (Element (Segment, Last_Index (Segment) - Overlap + 1) =
+--          Element (Path, Next_Index))
+--     with
+--       Ghost,
+--       Pre =>
+--         Integer (Length (Segment)) >= Overlap
+--         and then Next_Index in 1 .. Last_Index (Path);
 
    function Next_First_Id_Will_Be_Element_After_Next_Index
      (Next_First_Id : Pos64;
@@ -282,6 +282,34 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         else
           Next_Index in 1 .. Last_Index (Path) - 1);
 
+   function Next_Segment_Will_Overlap_Current_Segment
+     (Path : Pos64_Vector;
+      Cycle_Index : Ext_Vector_Index;
+      Next_First_Id : Pos64;
+      Next_Index : Vector_Index;
+      Segment : Pos64_Vector;
+      Overlap : Positive) return Boolean
+   is
+     (Element (Segment, Last_Index (Segment) - Overlap + 1) = Element (Path, Next_Index)
+     and then
+     (if Cycle_Index > 0 then
+        (if Next_Index < Last_Index (Path) then
+            Next_First_Id = Element (Path, Next_Index + 1)
+         else
+            Next_First_Id = Element (Path, Cycle_Index))
+      else
+         Next_First_Id = Element (Path, Next_Index + 1)))
+       with
+         Ghost, Global => null,
+         Pre =>
+           Integer (Length (Segment)) >= Overlap and then
+           Next_Index in 1 .. Last_Index (Path) and then
+           (if Cycle_Index > 0 then
+              Cycle_Index in 1 .. Last_Index (Path) - 1 and then
+              Next_Index in 1 .. Last_Index (Path)
+            else
+              Next_Index in 1 .. Last_Index (Path) - 1);
+
    function Path_Is_Nonempty_And_Indices_Are_Valid
      (Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
@@ -291,7 +319,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Last_Index (Path) <= Positive (Max) and then
        Next_Index in 1 .. Last_Index (Path) and then
        Cycle_Index in 0 .. Last_Index (Path) - 1)
-   with Ghost, Global => null; --, Pre => Next_Index > 0;
+   with Ghost, Global => null;
 
    function Configuration_Is_Valid
      (NumberWaypointsOverlap,
@@ -316,14 +344,16 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      with Ghost, Global => null;
 
    function Path_And_First_Waypoint_Are_Valid
-     (FirstWaypoint : Int64;
+     (FirstWaypoint : Pos64;
       Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
       Next_First_Id : Nat64) return Boolean
    is
      (Next_Index = 1 and then Next_First_Id = FirstWaypoint and then
       FirstWaypoint_Is_First_Or_Second_Element (FirstWaypoint, Path))
-   with Ghost, Global => null;
+   with
+     Ghost, Global => null,
+     Pre => Length (Path) > 0;
 
    function Cycle_Index_Is_Valid
      (Cycle_Index : Ext_Vector_Index;
@@ -336,7 +366,11 @@ package Waypoint_Plan_Manager with SPARK_Mode is
           Successor (Id_To_Next_Id, Last_Element (Path)))
       else
          Cycle_Index = 0)
-   with Ghost, Global => null;
+   with
+     Ghost, Global => null,
+     Pre =>
+       Length (Path) > 0 and then
+       (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
 
    function Valid_Path_Remaining
      (Path : Pos64_Vector;
@@ -351,6 +385,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         (if Next_Index < Last_Index (Path) then
               Element (Model (Path), Next_Index + 1) = Next_First_Id
          else
+            Cycle_Index in 1 .. Last_Index (Path) - 1 and then
             Element (Model (Path), Cycle_Index) = Next_First_Id))
        with Ghost, Global => null;
 
@@ -409,11 +444,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                          (State.Segment, State.Path,
                           State.Next_Index'Old, State.Cycle_Index)
               and then State.Next_Index in 1 .. Last_Index (State.Path)
-              and then Next_First_Id_Will_Be_Element_After_Next_Index
-                         (State.Next_First_Id, State.Next_Index,
-                          State.Cycle_Index, State.Path)
               and then Next_Segment_Will_Overlap_Current_Segment
-                         (State.Path, State.Next_Index,
+                         (State.Path, State.Cycle_Index, State.Next_First_Id, State.Next_Index,
                           State.Segment, Positive (Config.NumberWaypointsOverlap))
           else
             Is_Subsegment_Of_Path_Without_Cycle
@@ -432,11 +464,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
                                      Positive (Config.NumberWaypointsToServe) -
                                      Positive (Config.NumberWaypointsOverlap)
                   and then Next_Segment_Will_Overlap_Current_Segment
-                             (State.Path, State.Next_Index, State.Segment,
-                              Positive (Config.NumberWaypointsOverlap))
-                  and then Next_First_Id_Will_Be_Element_After_Next_Index
-                             (State.Next_First_Id, State.Next_Index,
-                              State.Cycle_Index, State.Path))
+                             (State.Path, State.Cycle_Index, State.Next_First_Id,
+                              State.Next_Index, State.Segment,
+                              Positive (Config.NumberWaypointsOverlap)))
              else
                Positive (Length (State.Segment)) =
                  Remaining_Path_Length (State.Path, State.Next_Index'Old)
