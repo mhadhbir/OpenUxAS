@@ -239,9 +239,17 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Cycle_Index : Ext_Vector_Index) return Boolean
    is
      (if Cycle_Index = 0 then
-         Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path)
+         Integer (Length (Segment)) <= Integer (Length (Path)) - Current_Index + 1 and then
+        (for all I in 1 .. Last_Index (Segment) =>
+           Element (Segment, I) = Element (Path, Current_Index + I - 1))
       else
-         Is_Subsegment_Of_Path_With_Cycle (Segment, Path, Current_Index, Cycle_Index))
+        (for all I in 1 .. Last_Index (Segment) =>
+             (if Current_Index + I - 1 <= Last_Index (Path) then
+                     Element (Segment, I) = Element (Path, Current_Index + I - 1)
+              else
+                 Element (Segment, I) =
+                    Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
+                               (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index))))
    with Ghost,
      Pre =>
        Last_Index (Path) <= Integer (Max)

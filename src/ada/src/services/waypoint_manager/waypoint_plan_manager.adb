@@ -237,16 +237,16 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
        and then Desired_Length in Overlap + 1 .. Positive (Max),
      Post =>
        Element (Segment, 1) = Element (Path, Current_Index)
-       and then
+       and then Is_Subsegment_Of_Path (Segment, Path, Current_Index, Cycle_Index) and then
        (if Cycle_Index > 0 then
           Positive (Length (Segment)) = Desired_Length
-          and then Is_Subsegment_Of_Path_With_Cycle
-                     (Segment, Path, Current_Index, Cycle_Index)
+          --and then Is_Subsegment_Of_Path_With_Cycle
+          --           (Segment, Path, Current_Index, Cycle_Index)
           and then Next_Index in 1 .. Last (Model (Path))
           and then Next_Segment_Will_Overlap_Current_Segment
                      (Path, Cycle_Index, Next_First_Id, Next_Index, Segment, Overlap)
         else
-          Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path) and then
+          --Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path) and then
           (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
            then
              Positive (Length (Segment)) = Desired_Length
@@ -298,7 +298,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                   Element (Segment, Seg_Overlap_Ind) =
                     Element (Path, Next_Index));
             pragma Loop_Invariant
-              (Is_Subsegment_Of_Path_With_Cycle
+              (Is_Subsegment_Of_Path
                  (Segment, Path, Current_Index, Cycle_Index));
             pragma Loop_Invariant (Last_Index (Segment) = I - 1);
 
