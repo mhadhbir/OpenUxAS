@@ -133,7 +133,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
               Find_Index (Path,
                           Successor (Id_To_Next_Id, Last_Element (Path)));
             pragma Assert
-              (Non_Zero_Cycle_Index_Is_Valid (Cycle_Index, Path, Id_To_Next_Id));
+              (Valid_Non_Zero_Cycle_Index (Cycle_Index, Path, Id_To_Next_Id));
             return;
          elsif Successor (Id_To_Next_Id, Last_Element (Path)) = 0
            or else not
@@ -231,7 +231,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre =>
        Is_Empty (Segment)
-       and then Path_Is_Nonempty_And_Indices_Are_Valid
+       and then Nonempty_Path_With_Indices_In_Range
                   (Path, Current_Index, Cycle_Index)
        and then Overlap in 2 .. Positive (Max) - 1
        and then Desired_Length in Overlap + 1 .. Positive (Max),

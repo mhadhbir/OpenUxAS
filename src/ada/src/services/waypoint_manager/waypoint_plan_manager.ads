@@ -126,8 +126,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      (M : Pos64_WP_Map;
       N : Pos64_Nat64_Map) return Boolean
    is
-     ((for all I of Model (M) => Contains (N, I)) and then
-        (for all I of Model (N) => Contains (M, I)))
+     ((for all I of Model (M) => Contains (N, I))
+       and then (for all I of Model (N) => Contains (M, I)))
    with Ghost, Global => null;
 
    function Elements_Are_Unique
@@ -144,9 +144,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Id_To_Waypoint : Pos64_WP_Map) return Boolean
    is
      (for all Id of Model (Id_To_Next_Id) =>
-           Contains (Id_To_Waypoint, Id) and then
-      Element (Id_To_Next_Id, Id) =
-        Element (Id_To_Waypoint, Id).NextWaypoint)
+           Contains (Id_To_Waypoint, Id)
+      and then Element (Id_To_Next_Id, Id) =
+                 Element (Id_To_Waypoint, Id).NextWaypoint)
    with Ghost, Global => null;
 
    function Is_Subsegment_Of_Path_With_Cycle
@@ -157,7 +157,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    is
      (for all I in 1 .. Last_Index (Segment) =>
         (if Current_Index + I - 1 <= Last_Index (Path) then
-           Element (Segment, I) = Element (Path, I + Current_Index - 1)
+           Element (Segment, I) = Element (Path, Current_Index + I - 1)
          else
            Element (Segment, I) =
              Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
@@ -165,10 +165,10 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    with
      Ghost,
      Pre =>
-       Last_Index (Path) <= Integer (Max) and
-       Cycle_Index in 1 .. Last_Index (Path) - 1 and
-       Current_Index in 1 .. Last_Index (Path) and
-       Last_Index (Segment) <= Integer (Max);
+       Last_Index (Path) <= Integer (Max)
+       and Cycle_Index in 1 .. Last_Index (Path) - 1
+       and Current_Index in 1 .. Last_Index (Path)
+       and Last_Index (Segment) <= Integer (Max);
 
    function Elements_Are_Successors
      (Id_To_Next_Id : Pos64_Nat64_Map;
@@ -180,8 +180,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    with
      Ghost,
      Pre =>
-       (for all Id of Model (Path) =>
-          Contains (Id_To_Next_Id, Id));
+       (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
 
    function FirstWaypoint_Is_First_Or_Second_Element
      (FirstWaypoint : Pos64;
@@ -204,10 +203,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre =>
        Length (Path) > 0 and then
-       (for all Id of Model (Path) =>
-          Contains (Id_To_Next_Id, Id));
+       (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
 
-   function Non_Zero_Cycle_Index_Is_Valid
+   function Valid_Non_Zero_Cycle_Index
      (Cycle_Index : Vector_Index;
       Path : Pos64_Vector;
       Id_To_Next_Id : Pos64_Nat64_Map) return Boolean
@@ -219,8 +217,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      Ghost,
      Pre =>
        Length (Path) > 0 and then
-       (for all Id of Model (Path) =>
-          Contains (Id_To_Next_Id, Id));
+       (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
 
    function Is_Subsegment_Of_Path_Without_Cycle
      (Segment : Pos64_Vector;
@@ -232,9 +229,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    with
      Ghost,
      Pre =>
-       Current_Index in 1 .. Last_Index (Path)
-       and then Integer (Length (Segment)) <=
-                  Integer (Length (Path)) - Current_Index + 1;
+       Current_Index in 1 .. Last_Index (Path) and then
+       Integer (Length (Segment)) <= Integer (Length (Path)) - Current_Index + 1;
 
    function Remaining_Path_Length
      (Path : Pos64_Vector;
@@ -290,7 +286,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Segment : Pos64_Vector;
       Overlap : Positive) return Boolean
    is
-     (Element (Segment, Last_Index (Segment) - Overlap + 1) = Element (Path, Next_Index)
+     (Element (Segment, Last_Index (Segment) - Overlap + 1) =
+        Element (Path, Next_Index)
      and then
      (if Cycle_Index > 0 then
         (if Next_Index < Last_Index (Path) then
@@ -299,18 +296,18 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             Next_First_Id = Element (Path, Cycle_Index))
       else
          Next_First_Id = Element (Path, Next_Index + 1)))
-       with
-         Ghost, Global => null,
-         Pre =>
-           Integer (Length (Segment)) >= Overlap and then
-           Next_Index in 1 .. Last_Index (Path) and then
-           (if Cycle_Index > 0 then
-              Cycle_Index in 1 .. Last_Index (Path) - 1 and then
-              Next_Index in 1 .. Last_Index (Path)
-            else
-              Next_Index in 1 .. Last_Index (Path) - 1);
+   with
+     Ghost, Global => null,
+     Pre =>
+       Integer (Length (Segment)) >= Overlap and then
+       Next_Index in 1 .. Last_Index (Path) and then
+       (if Cycle_Index > 0 then
+           Cycle_Index in 1 .. Last_Index (Path) - 1 and then
+           Next_Index in 1 .. Last_Index (Path)
+        else
+           Next_Index in 1 .. Last_Index (Path) - 1);
 
-   function Path_Is_Nonempty_And_Indices_Are_Valid
+   function Nonempty_Path_With_Indices_In_Range
      (Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
       Cycle_Index : Ext_Vector_Index) return Boolean
@@ -321,7 +318,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Cycle_Index in 0 .. Last_Index (Path) - 1)
    with Ghost, Global => null;
 
-   function Configuration_Is_Valid
+   function Valid_Configuration
      (NumberWaypointsOverlap,
       NumberWaypointsToServe : Common.UInt32) return Boolean
    is
@@ -341,11 +338,11 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       and then State_Old.Path = State.Path
       and then State_Old.Cycle_Index = State.Cycle_Index
       and then State_Old.Headed_To_First_Id = State.Headed_To_First_Id)
-     with Ghost, Global => null;
+   with Ghost, Global => null;
 
-   function Path_And_First_Waypoint_Are_Valid
-     (FirstWaypoint : Pos64;
-      Path : Pos64_Vector;
+   function Valid_Initial_Path
+     (Path : Pos64_Vector;
+      FirstWaypoint : Pos64;
       Next_Index : Ext_Vector_Index;
       Next_First_Id : Nat64) return Boolean
    is
@@ -361,9 +358,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Path : Pos64_Vector) return Boolean
    is
      (if Path_Has_Cycle (Id_To_Next_Id, Path) then
-       (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
-        Element (Path, Cycle_Index) =
-          Successor (Id_To_Next_Id, Last_Element (Path)))
+        (Cycle_Index in 1 .. Last_Index (Path) - 1 and then
+         Element (Path, Cycle_Index) =
+           Successor (Id_To_Next_Id, Last_Element (Path)))
       else
          Cycle_Index = 0)
    with
@@ -409,8 +406,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
             State.Next_Index = 0 and State.Next_First_Id = 0
             and Is_Empty (State.Path) and State.Cycle_Index = 0
           else
-            Path_And_First_Waypoint_Are_Valid
-            (State.MC.FirstWaypoint, State.Path, State.Next_Index, State.Next_First_Id)
+            Valid_Initial_Path
+              (State.Path, State.MC.FirstWaypoint, State.Next_Index, State.Next_First_Id)
             and then
             Cycle_Index_Is_Valid (State.Cycle_Index, State.Id_To_Next_Id, State.Path));
 
@@ -420,15 +417,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
      with
        Pre =>
-         Configuration_Is_Valid
+         Valid_Configuration
            (Config.NumberWaypointsOverlap, Config.NumberWaypointsToServe) and then
          State.MC.FirstWaypoint > 0 and then
-         Path_Is_Nonempty_And_Indices_Are_Valid
+         Nonempty_Path_With_Indices_In_Range
            (State.Path, State.Next_Index, State.Cycle_Index) and then
          (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id)) and then
          (if State.New_Command then
-            Path_And_First_Waypoint_Are_Valid
-              (State.MC.FirstWaypoint, State.Path, State.Next_Index, State.Next_First_Id)
+            Valid_Initial_Path
+              (State.Path, State.MC.FirstWaypoint, State.Next_Index, State.Next_First_Id)
           else
             Valid_Path_Remaining
               (State.Path, State.Next_Index, State.Cycle_Index, State.Next_First_Id)),
