@@ -232,6 +232,44 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Current_Index in 1 .. Last_Index (Path) and then
        Integer (Length (Segment)) <= Integer (Length (Path)) - Current_Index + 1;
 
+   function Is_Subsegment_Of_Path
+     (Segment : Pos64_Vector;
+      Path : Pos64_Vector;
+      Current_Index : Vector_Index;
+      Cycle_Index : Ext_Vector_Index) return Boolean
+   is
+     (if Cycle_Index = 0 then
+         Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path)
+      else
+         Is_Subsegment_Of_Path_With_Cycle (Segment, Path, Current_Index, Cycle_Index))
+   with Ghost,
+     Pre =>
+       Last_Index (Path) <= Integer (Max)
+       and Cycle_Index in 0 .. Last_Index (Path) - 1
+       and Current_Index in 1 .. Last_Index (Path)
+       and Last_Index (Segment) <= Integer (Max);
+
+--           function Is_Subsegment_Of_Path_With_Cycle
+--       (Segment : Pos64_Vector;
+--        Path : Pos64_Vector;
+--        Current_Index : Vector_Index;
+--        Cycle_Index : Vector_Index) return Boolean
+--     is
+--       (for all I in 1 .. Last_Index (Segment) =>
+--          (if Current_Index + I - 1 <= Last_Index (Path) then
+--             Element (Segment, I) = Element (Path, Current_Index + I - 1)
+--           else
+--             Element (Segment, I) =
+--               Element (Path, (Current_Index + I - 1 - Last_Index (Path) - 1) mod
+--                 (Last_Index (Path) - Cycle_Index + 1) + Cycle_Index)))
+--     with
+--       Ghost,
+--       Pre =>
+--         Last_Index (Path) <= Integer (Max)
+--         and Cycle_Index in 1 .. Last_Index (Path) - 1
+--         and Current_Index in 1 .. Last_Index (Path)
+--         and Last_Index (Segment) <= Integer (Max);
+
    function Remaining_Path_Length
      (Path : Pos64_Vector;
       Current_Index : Vector_Index) return Positive
@@ -434,20 +472,15 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          and then State.New_Command = False
          and then Element (State.Segment, 1) =
                     Element (State.Path, State'Old.Next_Index)
+         and then Is_Subsegment_Of_Path (State.Segment, State.Path, State.Next_Index'Old, State.Cycle_Index)
          and then
          (if State.Cycle_Index > 0 then
               Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
-              and then Is_Subsegment_Of_Path_With_Cycle
-                         (State.Segment, State.Path,
-                          State.Next_Index'Old, State.Cycle_Index)
               and then State.Next_Index in 1 .. Last_Index (State.Path)
               and then Next_Segment_Will_Overlap_Current_Segment
                          (State.Path, State.Cycle_Index, State.Next_First_Id, State.Next_Index,
                           State.Segment, Positive (Config.NumberWaypointsOverlap))
           else
-            Is_Subsegment_Of_Path_Without_Cycle
-              (State.Segment, State.Next_Index'Old, State.Path)
-            and then
             (if Remaining_Path_Length (State.Path, State.Next_Index'Old) >=
                   Positive (Config.NumberWaypointsToServe)
              then
