@@ -22,7 +22,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
      Pre => Length (WaypointList) <= Max,
      Post =>
        Waypoints_Are_Subset (Id_To_Waypoint, WaypointList)
-       and then Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id)
+       and then Have_Same_Keys (Id_To_Waypoint, Id_To_Next_Id)
        and then Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint);
 
    procedure Extract_MissionCommand_Maps
@@ -52,7 +52,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (Waypoints_Are_Subset (Id_To_Waypoint, WaypointList));
          pragma Loop_Invariant
-           (Has_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
+           (Have_Same_Keys (Id_To_Waypoint, Id_To_Next_Id));
          pragma Loop_Invariant
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
          -- The following corresponds to Waypoints_Are_Full_Subset and proves
@@ -95,7 +95,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
        and then FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path)
        and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
        and then Elements_Are_Unique (Path)
-       and then Elements_Are_Successors (Id_To_Next_Id, Path)
+       and then Path_Elements_Are_Successors (Path, Id_To_Next_Id)
        and then Cycle_Index_Is_Valid (Cycle_Index, Id_To_Next_Id, Path);
 
    procedure Construct_Path
@@ -156,7 +156,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
          pragma Loop_Invariant
            (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
          pragma Loop_Invariant
-           (Elements_Are_Successors (Id_To_Next_Id, Path));
+           (Path_Elements_Are_Successors (Path, Id_To_Next_Id));
          pragma Loop_Invariant
            (Elements_Are_Unique (Path));
       end loop;
@@ -237,29 +237,21 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
        and then Desired_Length in Overlap + 1 .. Positive (Max),
      Post =>
        Element (Segment, 1) = Element (Path, Current_Index)
-       and then Is_Subsegment_Of_Path (Segment, Path, Current_Index, Cycle_Index) and then
+       and then Is_Subsegment_Of_Path (Segment, Path, Current_Index, Cycle_Index)
+       and then
        (if Cycle_Index > 0 then
           Positive (Length (Segment)) = Desired_Length
-          --and then Is_Subsegment_Of_Path_With_Cycle
-          --           (Segment, Path, Current_Index, Cycle_Index)
           and then Next_Index in 1 .. Last (Model (Path))
           and then Next_Segment_Will_Overlap_Current_Segment
                      (Path, Cycle_Index, Next_First_Id, Next_Index, Segment, Overlap)
         else
-          --Is_Subsegment_Of_Path_Without_Cycle (Segment, Current_Index, Path) and then
-          (if Remaining_Path_Length (Path, Current_Index) >= Desired_Length
-           then
+          (if Remaining_Path_Length (Path, Current_Index) > Desired_Length then
              Positive (Length (Segment)) = Desired_Length
-             and then
-             (if Last_Index (Path) = Last_Index (Segment) then
-                 Next_Index = 0 and then Next_First_Id = 0
-              else
-                 Next_Index = Current_Index + Desired_Length - Overlap
-                 and then Next_Segment_Will_Overlap_Current_Segment
-                     (Path, Cycle_Index, Next_First_Id, Next_Index, Segment, Overlap))
+             and then Next_Index = Current_Index + Desired_Length - Overlap
+             and then Next_Segment_Will_Overlap_Current_Segment
+                        (Path, Cycle_Index, Next_First_Id, Next_Index, Segment, Overlap)
            else
-             Positive (Length (Segment)) =
-               Remaining_Path_Length (Path, Current_Index)
+             Positive (Length (Segment)) = Remaining_Path_Length (Path, Current_Index)
              and then Next_Index = 0 and then Next_First_Id = 0));
 
    procedure Initialize_Segment
@@ -343,8 +335,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                    Element (Path, Current_Index + J - 1));
          end loop;
 
-         if Len = Desired_Length
-            and then Last_Index (Path) /= Last_Index (Segment)
+         if Remaining_Path_Length (Path, Current_Index) > Desired_Length
          then
             Next_Index := Current_Index + Desired_Length - Overlap;
             Next_First_Id := Element (Path, Next_Index + 1);
@@ -385,7 +376,8 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
       -- declare block leads to unsound analysis. Since it only does
       -- straightforward translation of state to a message, it can be commented
       -- out for verification. Either way, SPARK will prove the postcondition,
-      -- but if this block is uncommented, any post will prove (even "False").
+      -- but if the following block is uncommented, any Post will prove
+      -- (even "False").
       declare
          MC_Out : MissionCommand := State.MC;
          WP_List : WP_Seq;
