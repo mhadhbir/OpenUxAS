@@ -9,7 +9,7 @@
 <file format="gnat-json" proved="true">
 <path name=".."/><path name=".."/><path name=".."/><path name=".."/><path name=".."/>
 <path name=".."/><path name=".."/><path name=".."/><path name=".."/><path name=".."/>
-<path name="tmp"/><path name="tmp40kev5o1"/><path name="waypoint_manager"/>
+<path name="tmp"/><path name="tmpktwqndtl"/><path name="waypoint_manager"/>
 <path name="gnatprove"/><path name="39f8b27503f8e2f80ac8-initial_path_parameters_are_valid.gnat-json"/>
 <theory name="Waypoint_plan_manager__initial_path_parameters_are_valid__subprogram_def" proved="true">
  <goal name="def&#39;vc" proved="true">
@@ -22,8 +22,8 @@
   </goal>
   <goal name="def&#39;vc.2" proved="true">
   <proof prover="0"><result status="valid" steps="46"/></proof>
-  <proof prover="1"><result status="valid" steps="802"/></proof>
-  <proof prover="2"><result status="highfailure"/></proof>
+  <proof prover="1" obsolete="true"><result status="valid" steps="802"/></proof>
+  <proof prover="2" obsolete="true"><result status="highfailure"/></proof>
   </goal>
  </transf>
  </goal>
