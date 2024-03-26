@@ -66,7 +66,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
       GimbalPayloadId : Common.Int64 := -1;
       -- Vehicle ID of managed vehicle
       VehicleID : Common.Int64 := -1;
-   end record;
+   end record with
+     Predicate =>
+       (NumberWaypointsOverlap >= 2 and then
+        NumberWaypointsOverlap <= UInt32 (Max) - 1 and then
+        NumberWaypointsToServe > NumberWaypointsOverlap and then
+        NumberWaypointsToServe <= UInt32 (Max));
 
    type Waypoint_Plan_Manager_State is record
       -- Copy of most recent MissionCommand
@@ -282,7 +287,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         else
            Next_Index in 1 .. Last_Index (Path) - 1);
 
-   function Nonempty_Path_With_Indices_In_Range
+   function Path_Is_Nonempty_And_Indices_In_Range
      (Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
       Cycle_Index : Ext_Vector_Index) return Boolean
@@ -291,16 +296,6 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Last_Index (Path) <= Positive (Max) and then
        Next_Index in 1 .. Last_Index (Path) and then
        Cycle_Index in 0 .. Last_Index (Path) - 1)
-   with Ghost, Global => null;
-
-   function Amounts_Are_Valid
-     (NumberWaypointsOverlap,
-      NumberWaypointsToServe : Common.UInt32) return Boolean
-   is
-      (NumberWaypointsOverlap >= 2 and then
-       NumberWaypointsOverlap <= UInt32 (Max) - 1 and then
-       NumberWaypointsToServe > NumberWaypointsOverlap and then
-       NumberWaypointsToServe <= UInt32 (Max))
    with Ghost, Global => null;
 
    function Rest_Of_State_Unchanged
@@ -344,7 +339,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
        Length (Path) > 0 and then
        (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id));
 
-   function Valid_Path_Remaining
+   function Is_Valid_Path_Remaining
      (Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
       Cycle_Index : Ext_Vector_Index;
@@ -374,8 +369,8 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          and then Have_Same_Keys (State.Id_To_Waypoint, State.Id_To_Next_Id)
          and then Id_Keys_Match_Waypoint_Ids (State.Id_To_Next_Id, State.Id_To_Waypoint)
          and then (for all Id of Model (State.Path) => Contains (State.Id_To_Next_Id, Id))
-         and then Path_Elements_Are_Successors (State.Path, State.Id_To_Next_Id)
          and then Elements_Are_Unique (State.Path)
+         and then Path_Elements_Are_Successors (State.Path, State.Id_To_Next_Id)
          and then
          (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint) then
             State.Next_Index = 0 and State.Next_First_Id = 0
@@ -390,47 +385,46 @@ package Waypoint_Plan_Manager with SPARK_Mode is
      (State : in out Waypoint_Plan_Manager_State;
       Config : Waypoint_Plan_Manager_Configuration_Data;
       Mailbox : in out Waypoint_Plan_Manager_Mailbox)
-     with
-       Pre =>
-         Amounts_Are_Valid (Config.NumberWaypointsOverlap, Config.NumberWaypointsToServe)
-         and then State.MC.FirstWaypoint > 0
-         and then Nonempty_Path_With_Indices_In_Range (State.Path, State.Next_Index, State.Cycle_Index)
-         and then (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id))
-         and then
-         (if State.New_Command then
-            Initial_Path_Parameters_Are_Valid (State.Path, State.MC.FirstWaypoint,
-                                               State.Next_Index, State.Next_First_Id)
-          else
-            Valid_Path_Remaining (State.Path, State.Next_Index,
-                                  State.Cycle_Index, State.Next_First_Id)),
-       Post =>
-         Rest_Of_State_Unchanged (State'Old, State)
-         and then State.New_Command = False
-         and then Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Index)
-         and then Is_Subsegment_Of_Path (State.Segment, State.Path, State.Next_Index'Old, State.Cycle_Index)
-         and then
-         (if State.Cycle_Index > 0 then
-            Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
-            and then State.Next_Index in 1 .. Last_Index (State.Path)
-            and then Next_Segment_Will_Overlap_Current_Segment
-                       (State.Path, State.Cycle_Index, State.Next_First_Id, State.Next_Index,
-                        State.Segment, Positive (Config.NumberWaypointsOverlap))
-          else
-            (if Remaining_Path_Length (State.Path, State.Next_Index'Old) >
-                  Positive (Config.NumberWaypointsToServe)
-             then
-               Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
-               and then State.Next_Index = State.Next_Index'Old +
-                          Positive (Config.NumberWaypointsToServe) -
-                          Positive (Config.NumberWaypointsOverlap)
-               and then Next_Segment_Will_Overlap_Current_Segment
-                          (State.Path, State.Cycle_Index, State.Next_First_Id,
-                           State.Next_Index, State.Segment,
-                           Positive (Config.NumberWaypointsOverlap))
-             else
-               Positive (Length (State.Segment)) =
-                 Remaining_Path_Length (State.Path, State.Next_Index'Old)
-               and then State.Next_Index = 0 and then State.Next_First_Id = 0));
+   with
+     Pre =>
+       State.MC.FirstWaypoint > 0
+       and then Path_Is_Nonempty_And_Indices_In_Range (State.Path, State.Next_Index, State.Cycle_Index)
+       and then (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id))
+       and then
+       (if State.New_Command then
+          Initial_Path_Parameters_Are_Valid (State.Path, State.MC.FirstWaypoint,
+                                             State.Next_Index, State.Next_First_Id)
+        else
+          Is_Valid_Path_Remaining (State.Path, State.Next_Index,
+                                   State.Cycle_Index, State.Next_First_Id)),
+     Post =>
+       State.New_Command = False
+       and then Element (State.Segment, 1) = Element (State.Path, State'Old.Next_Index)
+       and then Is_Subsegment_Of_Path (State.Segment, State.Path, State.Next_Index'Old, State.Cycle_Index)
+       and then
+       (if State.Cycle_Index > 0 then
+          Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
+          and then State.Next_Index in 1 .. Last_Index (State.Path)
+          and then Next_Segment_Will_Overlap_Current_Segment
+                     (State.Path, State.Cycle_Index, State.Next_First_Id, State.Next_Index,
+                      State.Segment, Positive (Config.NumberWaypointsOverlap))
+        else
+          (if Remaining_Path_Length (State.Path, State.Next_Index'Old) >
+                Positive (Config.NumberWaypointsToServe)
+           then
+             Positive (Length (State.Segment)) = Positive (Config.NumberWaypointsToServe)
+             and then State.Next_Index = State.Next_Index'Old +
+                        Positive (Config.NumberWaypointsToServe) -
+                        Positive (Config.NumberWaypointsOverlap)
+             and then Next_Segment_Will_Overlap_Current_Segment
+                        (State.Path, State.Cycle_Index, State.Next_First_Id,
+                         State.Next_Index, State.Segment,
+                         Positive (Config.NumberWaypointsOverlap))
+           else
+             Positive (Length (State.Segment)) =
+               Remaining_Path_Length (State.Path, State.Next_Index'Old)
+           and then State.Next_Index = 0 and then State.Next_First_Id = 0))
+       and then Rest_Of_State_Unchanged (State'Old, State);
 
 private
 

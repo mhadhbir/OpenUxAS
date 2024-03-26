@@ -57,18 +57,18 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
            (Id_Keys_Match_Waypoint_Ids (Id_To_Next_Id, Id_To_Waypoint));
          -- The following corresponds to Waypoints_Are_Full_Subset and proves
          -- with "prove line" but not with "prove subprogram"
-         --  pragma Loop_Invariant
-         --    (for all K in WP_Sequences.First .. I =>
-         --       (if Get (WaypointList, K).Number > 0
-         --          and then Get (WaypointList, K).NextWaypoint >= 0
-         --          and then
-         --            (for all J in WP_Sequences.First .. K - 1 =>
-         --               (Get (WaypointList, J).Number /= Get (WaypointList, K).Number
-         --                or else Get (WaypointList, J).NextWaypoint < 0))
-         --        then
-         --          (Contains (Id_To_Waypoint, Get (WaypointList, K).Number) and then
-         --           Element (Id_To_Waypoint, Get (WaypointList, K).Number) =
-         --             Get (WaypointList, K))));
+--           pragma Loop_Invariant
+--             (for all K in WP_Sequences.First .. I =>
+--                (if Get (WaypointList, K).Number > 0
+--                   and then Get (WaypointList, K).NextWaypoint >= 0
+--                   and then
+--                     (for all J in WP_Sequences.First .. K - 1 =>
+--                        (Get (WaypointList, J).Number /= Get (WaypointList, K).Number
+--                         or else Get (WaypointList, J).NextWaypoint < 0))
+--                 then
+--                   (Contains (Id_To_Waypoint, Get (WaypointList, K).Number) and then
+--                    Element (Id_To_Waypoint, Get (WaypointList, K).Number) =
+--                      Get (WaypointList, K))));
       end loop;
 
    end Extract_MissionCommand_Maps;
@@ -231,7 +231,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre =>
        Is_Empty (Segment)
-       and then Nonempty_Path_With_Indices_In_Range
+       and then Path_Is_Nonempty_And_Indices_In_Range
                   (Path, Current_Index, Cycle_Index)
        and then Overlap in 2 .. Positive (Max) - 1
        and then Desired_Length in Overlap + 1 .. Positive (Max),
@@ -335,8 +335,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                    Element (Path, Current_Index + J - 1));
          end loop;
 
-         if Remaining_Path_Length (Path, Current_Index) > Desired_Length
-         then
+         if Remaining_Path_Length (Path, Current_Index) > Desired_Length then
             Next_Index := Current_Index + Desired_Length - Overlap;
             Next_First_Id := Element (Path, Next_Index + 1);
          else
