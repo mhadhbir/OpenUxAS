@@ -287,7 +287,7 @@ package Waypoint_Plan_Manager with SPARK_Mode is
         else
            Next_Index in 1 .. Last_Index (Path) - 1);
 
-   function Path_Is_Nonempty_And_Indices_In_Range
+   function Path_Is_Valid_Size_And_Indices_In_Range
      (Path : Pos64_Vector;
       Next_Index : Ext_Vector_Index;
       Cycle_Index : Ext_Vector_Index) return Boolean
@@ -373,11 +373,12 @@ package Waypoint_Plan_Manager with SPARK_Mode is
          and then Path_Elements_Are_Successors (State.Path, State.Id_To_Next_Id)
          and then
          (if not Contains (Model (State.Id_To_Next_Id), MC.FirstWaypoint) then
-            State.Next_Index = 0 and State.Next_First_Id = 0
-            and Is_Empty (State.Path) and State.Cycle_Index = 0
+            Is_Empty (State.Path) and State.Next_First_Id = 0 and
+            State.Next_Index = 0 and State.Cycle_Index = 0
           else
-            Initial_Path_Parameters_Are_Valid
-              (State.Path, State.MC.FirstWaypoint, State.Next_Index, State.Next_First_Id)
+            Length (State.Path) > 0
+            and then Initial_Path_Parameters_Are_Valid
+                      (State.Path, State.MC.FirstWaypoint, State.Next_Index, State.Next_First_Id)
             and then
             Cycle_Index_Is_Valid (State.Cycle_Index, State.Id_To_Next_Id, State.Path));
 
@@ -388,8 +389,9 @@ package Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre =>
        State.MC.FirstWaypoint > 0
-       and then Path_Is_Nonempty_And_Indices_In_Range (State.Path, State.Next_Index, State.Cycle_Index)
+       and then Path_Is_Valid_Size_And_Indices_In_Range (State.Path, State.Next_Index, State.Cycle_Index)
        and then (for all Id of Model (State.Path) => Contains (State.Id_To_Waypoint, Id))
+       and then Length (State.Path) > 0
        and then
        (if State.New_Command then
           Initial_Path_Parameters_Are_Valid (State.Path, State.MC.FirstWaypoint,

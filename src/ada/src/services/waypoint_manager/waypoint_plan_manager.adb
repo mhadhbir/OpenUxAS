@@ -231,7 +231,7 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
    with
      Pre =>
        Is_Empty (Segment)
-       and then Path_Is_Nonempty_And_Indices_In_Range
+       and then Path_Is_Valid_Size_And_Indices_In_Range
                   (Path, Current_Index, Cycle_Index)
        and then Overlap in 2 .. Positive (Max) - 1
        and then Desired_Length in Overlap + 1 .. Positive (Max),
@@ -371,35 +371,41 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
                           New_Path_Index,
                           New_First_Id);
 
-      -- Due to a bug in SPARK 24 related to analysis of tagged types, this
-      -- declare block leads to unsound analysis. Since it only does
-      -- straightforward translation of state to a message, it can be commented
-      -- out for verification. Either way, SPARK will prove the postcondition,
-      -- but if the following block is uncommented, any Post will prove
-      -- (even "False").
       declare
          MC_Out : MissionCommand := State.MC;
          WP_List : WP_Seq;
          Id : Pos64;
          WP : Waypoint;
+         Last_WP : Waypoint with Ghost;
       begin
          MC_Out.FirstWaypoint := State.Next_First_Id;
          for I in First_Index (State.Segment) .. Last_Index (State.Segment) loop
             Id := Element (State.Segment, I);
-            if Contains (State.Id_To_Waypoint, Id) then
-               WP := Element (State.Id_To_Waypoint, Id);
-               if I = Last_Index (State.Segment) then
-                  WP.NextWaypoint := WP.Number;
-                  -- TODO: Extend SPARK messages to handle
-                  -- VehicleAction -> NavigationAction -> LoiterAction
-                  -- VehicleAction -> PayloadAction -> GimbalAngleAction
-               end if;
-               -- WP.TurnType := Config.TurnType;
-               WP_List := Add (WP_List, WP);
+            WP := Element (State.Id_To_Waypoint, Id);
+            if I = Last_Index (State.Segment) then
+               WP.NextWaypoint := WP.Number;
+               Last_WP := WP;
+               -- TODO: Extend SPARK messages to handle
+               -- VehicleAction -> NavigationAction -> LoiterAction
+               -- VehicleAction -> PayloadAction -> GimbalAngleAction
             end if;
+            WP_List := Add (WP_List, WP);
+
             pragma Loop_Invariant
               (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
+            pragma Loop_Invariant (Positive (Length (WP_List)) = I);
+            pragma Loop_Invariant
+              (for all J in First_Index (State.Segment) .. I =>
+                   (if J /= Last_Index (State.Segment) then
+                           Get (WP_List, J) = Element (State.Id_To_Waypoint, Element (State.Segment, J))
+                    else Get (WP_List, J) = Last_WP));
          end loop;
+
+         pragma Assert
+           (for all I in First_Index (State.Segment) .. Last_Index (State.Segment) =>
+                (if I /= Last_Index (State.Segment) then
+                        Get (WP_List, I) = Element (State.Id_To_Waypoint, Element (State.Segment, I))
+                 else Get (WP_List, I) = Last_WP));
          MC_Out.WaypointList := WP_List;
          sendBroadcastMessage (Mailbox, MC_Out);
       end;
