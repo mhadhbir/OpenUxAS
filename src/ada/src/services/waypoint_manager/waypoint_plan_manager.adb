@@ -89,9 +89,9 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
        and then not Is_Empty (Id_To_Next_Id)
        and then Contains (Id_To_Next_Id, First_Id),
      Post =>
-       Next_Index = 1
-       and then not Is_Empty (Path)
+       not Is_Empty (Path)
        and then Next_Index <= Last_Index (Path)
+       and then Next_Index = 1
        and then FirstWaypoint_Is_First_Or_Second_Element (First_Id, Path)
        and then (for all Id of Model (Path) => Contains (Id_To_Next_Id, Id))
        and then Elements_Are_Unique (Path)
@@ -391,8 +391,6 @@ package body Waypoint_Plan_Manager with SPARK_Mode is
             end if;
             WP_List := Add (WP_List, WP);
 
-            pragma Loop_Invariant
-              (Integer (Length (WP_List)) <= I - First_Index (State.Segment) + 1);
             pragma Loop_Invariant (Positive (Length (WP_List)) = I);
             pragma Loop_Invariant
               (for all J in First_Index (State.Segment) .. I =>
