@@ -1,5 +1,5 @@
 amase:
-  scenario: Scenario_WaterwaySearch.xml
+  scenario: Scenario_SparkGoldWPM.xml
 
 uxases:
   - config: cfg_ada.xml
