@@ -6,19 +6,19 @@ with UxAS.Comms.LMCP_Object_Message_Sender_Pipes;
 --  Package only concerned with message passing. It defines its own state,
 --  named Mailbox here, which is not mixed with the state of the service.
 
-package <Service_Name>_Communication with SPARK_Mode is
+package Automation_Request_Validator_Mailboxes with SPARK_Mode is
 
-   type <Service_Name>_Mailbox is limited private;
+   type Automation_Request_Validator_Mailbox is limited private;
 
    procedure Initialize
-     (This         : out <Service_Name>_Mailbox;
+     (This         : out Automation_Request_Validator_Mailbox;
       Source_Group : String;
       Unique_Id    : Int64;
       Entity_Id    : UInt32;
       Service_Id   : UInt32);
 
    procedure sendBroadcastMessage
-     (This : in out <Service_Name>_Mailbox;
+     (This : in out Automation_Request_Validator_Mailbox;
       Msg   : Message_Root'Class);
 
 private
@@ -26,10 +26,9 @@ private
 
    use UxAS.Comms.LMCP_Object_Message_Sender_Pipes;
 
-   type <Service_Name>_Mailbox is tagged limited record
+   type Automation_Request_Validator_Mailbox is tagged limited record
       Message_Sender_Pipe           : LMCP_Object_Message_Sender_Pipe;
       Source_Group                  : Unbounded_String;
       Unique_Entity_Send_Message_Id : Int64;
    end record;
-
-end <Service_Name>_Communication;
+end Automation_Request_Validator_Mailboxes;

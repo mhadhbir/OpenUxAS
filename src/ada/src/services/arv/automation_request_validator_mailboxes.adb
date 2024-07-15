@@ -1,14 +1,14 @@
 with AVTAS.LMCP.Types;
 with LMCP_Message_Conversions; use LMCP_Message_Conversions;
 
-package body <Service_Name>_Communication is
+package body Automation_Request_Validator_Mailboxes is
 
    ----------------
    -- Initialize --
    ----------------
 
    procedure Initialize
-     (This         : out <Service_Name>_Mailbox;
+     (This         : out Automation_Request_Validator_Mailbox;
       Source_Group : String;
       Unique_Id    : Int64;
       Entity_Id    : UInt32;
@@ -39,7 +39,7 @@ package body <Service_Name>_Communication is
    --  this is sendSharedLMCPObjectBroadcastMessage(), in our code Send_Shared_LMCP_Object_Broadcast_Message
 
    procedure sendBroadcastMessage
-     (This : in out <Service_Name>_Mailbox;
+     (This : in out Automation_Request_Validator_Mailbox;
       Msg  : Message_Root'Class)
    is
    begin
@@ -48,4 +48,4 @@ package body <Service_Name>_Communication is
       This.Message_Sender_Pipe.Send_Shared_Broadcast_Message (As_Object_Any (Msg));
    end sendBroadcastMessage;
 
-end <Service_Name>_Communication;
+end Automation_Request_Validator_Mailboxes;
