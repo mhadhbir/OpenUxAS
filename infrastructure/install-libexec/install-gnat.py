@@ -91,7 +91,7 @@ ALR_TOOLCHAIN_CMD = Command(
         ALR_SETTINGS_DIR,
         "toolchain",
         "--select",
-        "gnat_native^13",
+        "gnat_native^14",
         "gprbuild^22",
     ],
     description="Install GNAT toolchain using alr",

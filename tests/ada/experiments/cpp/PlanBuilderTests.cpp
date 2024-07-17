@@ -45,7 +45,7 @@ namespace test
     oss << "UniqueAutomationRequest: RequestID => " << request->getRequestID()
         << ", OperatingRegion => " << request->getOriginalRequest()->getOperatingRegion()
         << ", TaskRelationships => " << request->getOriginalRequest()->getTaskRelationships()
-        << ", RedoAllTasks => " << request->getOriginalRequest()->getRedoAllTasks();    
+        << ", RedoAllTasks => " << request->getOriginalRequest()->getRedoAllTasks();
     oss << ", Entity List: => " + Int64_Seq_To_String(request->getOriginalRequest()->getEntityList());
     oss << ", Task List: => " + Int64_Seq_To_String(request->getOriginalRequest()->getTaskList());
     oss << PlanningState_Seq_To_String(request->getPlanningStates());
@@ -91,7 +91,7 @@ namespace test
     }
 
   void writeStateToFile(uxas::service::PlanBuilderService service)
-    {    
+    {
     }
     void PlanBuilderTests::Process_Task_Assignment_Summary_Test ()
     {
@@ -131,7 +131,7 @@ namespace test
 
 
     std::cerr << "I got here 3" << std::endl;
-    
+
     std::shared_ptr<afrl::cmasi::EntityState> entityStatePtr2 = std::make_shared<afrl::cmasi::EntityState>();
     entityStatePtr2->setID(101);
     afrl::cmasi::Location3D* _location = new afrl::cmasi::Location3D();
@@ -145,26 +145,26 @@ namespace test
 
 
     std::cerr << "I got here 4" << std::endl;
-    
+
     std::vector<int64_t>& tasks2 = entityStatePtr2->getAssociatedTasks();
 
     std::cerr << "I got here 5" << std::endl;
-    
+
     tasks2.push_back(1);
 
     std::cerr << "I got here 6" << std::endl;
-    
+
     tasks2.push_back(2);
     entityStatePtr2->setTime(350);
 
     std::cerr << "I got here 7" << std::endl;
-    
+
     std::cerr << "I got here 8" << std::endl;
     service->m_currentEntityStates[entityStatePtr2->getID()] = entityStatePtr2;
 
 
     std::cerr << "I got here 9" << std::endl;
-    
+
     std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> uniqueAutomationRequest = std::make_shared<uxas::messages::task::UniqueAutomationRequest>();
     service->m_uniqueAutomationRequests[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = uniqueAutomationRequest;
     service->m_uniqueAutomationRequests[taskAssignmentSummary->getCorrespondingAutomationRequestID()]->setRequestID(taskAssignmentSummary->getCorrespondingAutomationRequestID());
@@ -221,15 +221,15 @@ namespace test
     service->checkNextTaskImplementationRequest(5);
 
      std::cerr << "I got here 2" + std::to_string(taskAssignmentSummary->getCorrespondingAutomationRequestID()) << std::endl;
-   
+
 
     service->processTaskAssignmentSummary(taskAssignmentSummary);
 
-    Write_UniqueAutomationRequest_Map("example.txt", service->m_uniqueAutomationRequests);
+    Write_UniqueAutomationRequest_Map("Cpp_Process_Task_Assignment_Summary_Test.txt", service->m_uniqueAutomationRequests);
 
     std::cerr << "I am done" << std::endl;
 
-    // Write State to file 
+    // Write State to file
     }
 
     void PlanBuilderTests::Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test ()
