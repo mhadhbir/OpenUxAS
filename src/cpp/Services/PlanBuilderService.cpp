@@ -149,6 +149,8 @@ void PlanBuilderService::sendError(std::string& errMsg)
 
 void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas::messages::task::TaskAssignmentSummary>& taskAssignmentSummary)
 {
+    std::cerr << "I am in" << std::endl;
+
     // validate that this summary corresponds to an existing unique automation request
     auto correspondingAutomationRequest = std::make_shared<uxas::messages::task::UniqueAutomationRequest>();
     auto found = m_uniqueAutomationRequests.find(taskAssignmentSummary->getCorrespondingAutomationRequestID());
@@ -181,15 +183,19 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
     // ensure that a valid state for each vehicle in the request has been received
     for(auto v : correspondingAutomationRequest->getOriginalRequest()->getEntityList())
     {
+        std::cerr << "I am in 1" << std::endl;
         auto found = m_currentEntityStates.find(v);
         if(found == m_currentEntityStates.end())
         {
+            std::cerr << "I am in error" << std::endl;
             std::string message = "ERROR::processTaskAssignmentSummary: Corresponding Unique Automation Request included vehicle ID [";
             message += std::to_string(v) + "] which does not have a corresponding current state!";
-            sendError(message);
+            std::cerr << message  << std::endl;
             return;
         }
     }
+    std::cerr << "I am in 1" << std::endl;
+
     
     // initialize state tracking maps with this corresponding request IDs
     m_assignmentSummaries[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = taskAssignmentSummary;
@@ -198,10 +204,12 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
     m_inProgressResponse[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = std::make_shared<uxas::messages::task::UniqueAutomationResponse>();
     m_inProgressResponse[taskAssignmentSummary->getCorrespondingAutomationRequestID()]->setResponseID(taskAssignmentSummary->getCorrespondingAutomationRequestID());
     
+    std::cerr << "I am in 2" << std::endl;
     // list all participating vehicles in the assignment
     std::vector<int64_t> participatingVehicles = correspondingAutomationRequest->getOriginalRequest()->getEntityList();
     if(participatingVehicles.empty())
     {
+        std::cerr << "I am in 3" << std::endl;
         for(auto v: m_currentEntityStates)
             participatingVehicles.push_back(v.first);
     }
@@ -213,7 +221,7 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
         auto projectedState = std::make_shared<ProjectedState>();
         projectedState->finalWaypointID = 0;
         projectedState->time = entityState->getTime();
-        
+        std::cerr << "I am in 4" << std::endl;
         auto usePlanningState = std::find_if(correspondingAutomationRequest->getPlanningStates().begin(), correspondingAutomationRequest->getPlanningStates().end(),
                                             [&](uxas::messages::task::PlanningState* state) { return state->getEntityID() == vID; });
         if(usePlanningState != correspondingAutomationRequest->getPlanningStates().end())
@@ -246,7 +254,7 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
             
             projectedState->setState(planState);
         }
-                                            
+        std::cerr << "I am in 5" << std::endl;                    
         m_projectedEntityStates[taskAssignmentSummary->getCorrespondingAutomationRequestID()].push_back(projectedState);
     }
     
@@ -425,6 +433,8 @@ void PlanBuilderService::checkNextTaskImplementationRequest(int64_t uniqueReques
     //    no --> send m_inProgressResponse[uniqueRequestID], then clear it out
     if(m_remainingAssignments.find(uniqueRequestID) != m_remainingAssignments.end())
     {
+        std::cerr << "I am in" << std::endl;
+
         if(m_remainingAssignments[uniqueRequestID].empty())
         {
             // add FinalStates (which are the 'projected' states in the planning process)
@@ -434,6 +444,7 @@ void PlanBuilderService::checkNextTaskImplementationRequest(int64_t uniqueReques
                     if(e && e->state)
                         m_inProgressResponse[uniqueRequestID]->getFinalStates().push_back(e->state->clone());
             }
+            std::cerr << "I am in 1" << std::endl;
 
             auto response = m_inProgressResponse[uniqueRequestID];
 
@@ -462,6 +473,8 @@ void PlanBuilderService::checkNextTaskImplementationRequest(int64_t uniqueReques
         }
         else
         {
+            std::cerr << "I am in 3" << std::endl;
+
             sendNextTaskImplementationRequest(uniqueRequestID);
         }
     }

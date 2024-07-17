@@ -1,0 +1,11 @@
+m_uniqueAutomationRequests:
+UniqueAutomationResponse_Map:
+m_assignmentSummaries:
+m_projectedEntityStates:
+ProjectedState: FinalWaypointID =>  0, Time =>  0PlanningState: EntityID =>  1, Latitude =>  0.00000000000000E+00, Longitude =>  0.00000000000000E+00, Altitude =>  0.00000E+00, AltitudeType => MSL, Heading =>  0.00000E+00ProjectedState: FinalWaypointID =>  0, Time =>  0PlanningState: EntityID =>  0, Latitude =>  0.00000000000000E+00, Longitude =>  0.00000000000000E+00, Altitude =>  0.00000E+00, AltitudeType => MSL, Heading =>  0.00000E+00
+m_remainingAssignments:
+
+m_expectedResponseID:
+EntityState_Map:
+m_reqeustIDVsOverrides:
+SpeedAltPair: VehicleID =>  3, TaskID =>  0, Speed =>  0.00000E+00, Altitude =>  0.00000E+00, AltitudeType => AGLSpeedAltPair: VehicleID =>  4, TaskID =>  0, Speed =>  0.00000E+00, Altitude =>  0.00000E+00, AltitudeType => AGL

@@ -55,9 +55,9 @@ package body State_Serializer is
       return To_Unbounded_String ("UniqueAutomationRequest: RequestID => " & Int64'Image (Request.RequestID) &
          ", OperatingRegion => " & Int64'Image (Request.OperatingRegion) &
          ", TaskRelationships => " & To_String (Request.TaskRelationships) &
-         ", RedoAllTasks => " & Boolean'Image (Request.RedoAllTasks) &
-         Int64_Seq_To_String (Request.EntityList) &
-         Int64_Seq_To_String (Request.TaskList) &
+         ", RedoAllTasks => " & Boolean'Image (Request.RedoAllTasks)) &
+         ", Entity List: => " & Int64_Seq_To_String (Request.EntityList) &
+         ", Task List: => " & Int64_Seq_To_String (Request.TaskList) &
          PlanningState_Seq_To_String (Request.PlanningStates) &
          To_Unbounded_String (", SandboxRequest => " & Boolean'Image (Request.SandboxRequest));
    end UniqueAutomationRequest_To_String;
@@ -77,7 +77,7 @@ package body State_Serializer is
 
    -- Helper function to convert VehicleAction to string
    function VehicleAction_To_String
-     (VA : ç) return Unbounded_String is
+     (VA : VehicleAction) return Unbounded_String is
    begin
       return Int64_Seq_To_String (VA.AssociatedTaskList);
    end VehicleAction_To_String;
