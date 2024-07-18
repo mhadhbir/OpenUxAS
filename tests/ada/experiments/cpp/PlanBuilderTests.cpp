@@ -38,7 +38,7 @@ namespace test
     oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
     oss.precision(14);
     for (auto element : seq) {
-        oss << " " + element; // Convert each int64_t to string and append to stream
+        oss << " " << element; // Convert each int64_t to string and append to stream
     }
     return oss.str();
     }
@@ -50,11 +50,11 @@ namespace test
     oss << "UniqueAutomationRequest: RequestID => " << request->getRequestID()
         << ", OperatingRegion => " << request->getOriginalRequest()->getOperatingRegion()
         << ", TaskRelationships => " << request->getOriginalRequest()->getTaskRelationships()
-        << ", RedoAllTasks => " << request->getOriginalRequest()->getRedoAllTasks();
-    oss << ", Entity List: => " + Int64_Seq_To_String(request->getOriginalRequest()->getEntityList());
-    oss << ", Task List: => " + Int64_Seq_To_String(request->getOriginalRequest()->getTaskList());
-    oss << PlanningState_Seq_To_String(request->getPlanningStates());
-    oss << ", SandboxRequest => " << request->getSandBoxRequest();
+        << ", RedoAllTasks => " << request->getOriginalRequest()->getRedoAllTasks()
+        << ", Entity List: => " << Int64_Seq_To_String(request->getOriginalRequest()->getEntityList())
+        << ", Task List: => " << Int64_Seq_To_String(request->getOriginalRequest()->getTaskList())
+        << PlanningState_Seq_To_String(request->getPlanningStates())
+        << ", SandboxRequest => " << request->getSandBoxRequest();
     return oss.str();
     }
 
@@ -101,10 +101,10 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "VehicleActionCommand: CommandId => " << command->getCommandID() <<
-                         ", VehicleId => " << command->getVehicleID() <<
-                         VA_Seq_To_String(command->getVehicleActionList()) <<
-                         ", Status => " << command->getStatus();
+        oss << "VehicleActionCommand: CommandId => " << command->getCommandID()
+            << ", VehicleId => " << command->getVehicleID()
+            << VA_Seq_To_String(command->getVehicleActionList())
+            << ", Status => " << command->getStatus();
         return oss.str();
     }
 
@@ -122,20 +122,20 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "Waypoint: Number => " << wp->getNumber() <<
-                            ", Latitude => " << wp->getLatitude() <<
-                            ", Longitude => " << wp->getLongitude() <<
-                            ", Altitude => " << wp->getAltitude() <<
-                            ", AltitudeType => " << wp->getAltitudeType() <<
-                            ", NextWaypoint => " << wp->getNextWaypoint() <<
-                            ", Speed => " << wp->getSpeed() <<
-                            ", SpeedType => " << wp->getSpeedType() <<
-                            ", ClimbRate => " << wp->getClimbRate() <<
-                            ", TurnType => " << wp->getTurnType() <<
-                            ", ContingencyWaypointA => " << wp->getContingencyWaypointA() <<
-                            ", ContingencyWaypointB => " << wp->getContingencyWaypointB() <<
-                            VA_Seq_To_String(wp->getVehicleActionList()) <<
-                            Int64_Seq_To_String(wp->getAssociatedTasks());
+        oss << "Waypoint: Number => " << wp->getNumber()
+            << ", Latitude => " << wp->getLatitude()
+            << ", Longitude => " << wp->getLongitude()
+            << ", Altitude => " << wp->getAltitude()
+            << ", AltitudeType => " << wp->getAltitudeType()
+            << ", NextWaypoint => " << wp->getNextWaypoint()
+            << ", Speed => " << wp->getSpeed()
+            << ", SpeedType => " << wp->getSpeedType()
+            << ", ClimbRate => " << wp->getClimbRate()
+            << ", TurnType => " << wp->getTurnType()
+            << ", ContingencyWaypointA => " << wp->getContingencyWaypointA()
+            << ", ContingencyWaypointB => " << wp->getContingencyWaypointB()
+            << VA_Seq_To_String(wp->getVehicleActionList())
+            << Int64_Seq_To_String(wp->getAssociatedTasks());
         return oss.str();
     }
 
@@ -153,12 +153,12 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "MissionCommand: CommandId => " << command->getCommandID() <<
-                            ", VehicleId => " << command->getVehicleID() <<
-                            VA_Seq_To_String(command->getVehicleActionList()) <<
-                            ", Status => " << command->getStatus() <<
-                            WP_Seq_To_String(command->getWaypointList()) <<
-                            ", FirstWaypoint => " << command->getFirstWaypoint();
+        oss << "MissionCommand: CommandId => " << command->getCommandID()
+            << ", VehicleId => " << command->getVehicleID()
+            << VA_Seq_To_String(command->getVehicleActionList())
+            << ", Status => " << command->getStatus()
+            << WP_Seq_To_String(command->getWaypointList())
+            << ", FirstWaypoint => " << command->getFirstWaypoint();
         return oss.str();
     }
 
@@ -186,11 +186,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "UniqueAutomationResponse: ResponseID => " << response->getResponseID() <<
-                            MissionCommand_Seq_To_String(response->getOriginalResponse()->getMissionCommandList()) <<
-                            VehicleActionCommand_Seq_To_String(response->getOriginalResponse()->getVehicleCommandList()) <<
-                            KVP_Seq_To_String(response->getOriginalResponse()->getInfo()) <<
-                            PlanningState_Seq_To_String(response->getFinalStates());
+        oss << "UniqueAutomationResponse: ResponseID => " << response->getResponseID()
+            << MissionCommand_Seq_To_String(response->getOriginalResponse()->getMissionCommandList())
+            << VehicleActionCommand_Seq_To_String(response->getOriginalResponse()->getVehicleCommandList())
+            << KVP_Seq_To_String(response->getOriginalResponse()->getInfo())
+            << PlanningState_Seq_To_String(response->getFinalStates());
         return oss.str();
     }
 
@@ -204,11 +204,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignment: TaskID => " << task_assignment->getTaskID() +
-                            ", OptionID => " << task_assignment->getOptionID() +
-                            ", AssignedVehicle => " << task_assignment->getAssignedVehicle() <<
-                            ", TimeThreshold => " << task_assignment->getTimeThreshold() <<
-                            ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        oss << "TaskAssignment: TaskID => " << task_assignment->getTaskID()
+            << ", OptionID => " << task_assignment->getOptionID()
+            << ", AssignedVehicle => " << task_assignment->getAssignedVehicle()
+            << ", TimeThreshold => " << task_assignment->getTimeThreshold()
+            << ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
         return oss.str();
     }
 
@@ -228,11 +228,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignment: TaskID => "  << task_assignment->getTaskID() <<
-                            ", OptionID => " << task_assignment->getOptionID() <<
-                            ", AssignedVehicle => " << task_assignment->getAssignedVehicle() <<
-                            ", TimeThreshold => " << task_assignment->getTimeThreshold() <<
-                            ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        oss << "TaskAssignment: TaskID => "  << task_assignment->getTaskID()
+            << ", OptionID => " << task_assignment->getOptionID()
+            << ", AssignedVehicle => " << task_assignment->getAssignedVehicle()
+            << ", TimeThreshold => " << task_assignment->getTimeThreshold()
+            << ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
         return oss.str();
     }
 
@@ -252,9 +252,9 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignmentSummary: CorrespondingAutomationRequestID => " << task_assignment_summary->getCorrespondingAutomationRequestID() <<
-                            ", OperatingRegion => " << task_assignment_summary->getOperatingRegion() <<
-                            TaskAssignment_Vect_To_String(task_assignment_summary->getTaskList());
+        oss << "TaskAssignmentSummary: CorrespondingAutomationRequestID => " << task_assignment_summary->getCorrespondingAutomationRequestID()
+            << ", OperatingRegion => " << task_assignment_summary->getOperatingRegion()
+            << TaskAssignment_Vect_To_String(task_assignment_summary->getTaskList());
         return oss.str();
     }
 
@@ -268,9 +268,9 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "ProjectedState: FinalWaypointID => " << state->finalWaypointID <<
-                            ", Time => " << state->time <<
-                            PlanningState_To_String(state->state);
+        oss << "ProjectedState: FinalWaypointID => " << state->finalWaypointID
+            << ", Time => " << state->time
+            << PlanningState_To_String(state->state);
         return oss.str();
     }
 
@@ -308,13 +308,13 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "EntityState: Id => " << entity_state->getID() <<
-                            ", Latitude => " << entity_state->getLocation()->getLatitude() <<
-                            ", Longitude => " << entity_state->getLocation()->getLongitude() <<
-                            ", Altitude => " << entity_state->getLocation()->getAltitude() <<
-                            ", AltitudeType => " << entity_state->getLocation()->getAltitudeType() <<
-                            ", Heading => " << entity_state->getHeading() <<
-                            ", Time => " << entity_state->getTime();
+        oss << "EntityState: Id => " << entity_state->getID()
+            << ", Latitude => " << entity_state->getLocation()->getLatitude()
+            << ", Longitude => " << entity_state->getLocation()->getLongitude()
+            << ", Altitude => " << entity_state->getLocation()->getAltitude()
+            << ", AltitudeType => " << entity_state->getLocation()->getAltitudeType()
+            << ", Heading => " << entity_state->getHeading()
+            << ", Time => " << entity_state->getTime();
         return oss.str();
     }
 
@@ -328,11 +328,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "SpeedAltPair: VehicleID => " << sap->getVehicleID() <<
-                         ", TaskID => " << sap->getTaskID() <<
-                         ", Speed => " << sap->getSpeed() <<
-                         ", Altitude => " << sap->getAltitude() <<
-                         ", AltitudeType => " << sap->getAltitudeType();
+        oss << "SpeedAltPair: VehicleID => " << sap->getVehicleID()
+            << ", TaskID => " << sap->getTaskID()
+            << ", Speed => " << sap->getSpeed()
+            << ", Altitude => " << sap->getAltitude()
+            << ", AltitudeType => " << sap->getAltitudeType();
     return oss.str();
     }
 
@@ -354,8 +354,6 @@ namespace test
 
     void PlanBuilderTests::writeStateToFile(const std::string File, uxas::service::PlanBuilderService* service)
     {
-        std::cerr << "I am inside write" << std::endl;
-
         // Write the content of m_uniqueAutomationRequests
         Write_String_To_File (File, "m_uniqueAutomationRequests:");
         Write_UniqueAutomationRequest_Map (File, service->m_uniqueAutomationRequests);
@@ -393,7 +391,6 @@ namespace test
     {
     uxas::service::PlanBuilderService* service = new uxas::service::PlanBuilderService();
 
-    std::cerr << "I got here 1" << std::endl;
     std::shared_ptr<uxas::messages::task::TaskAssignmentSummary> taskAssignmentSummary = std::make_shared<uxas::messages::task::TaskAssignmentSummary>();
     taskAssignmentSummary->setCorrespondingAutomationRequestID (1);
 
@@ -406,8 +403,6 @@ namespace test
     std::vector<uxas::messages::task::TaskAssignment*>& taskList = taskAssignmentSummary->getTaskList();
     taskList.push_back(task1);
     taskList.push_back(task2);
-
-    std::cerr << "I got here 2" << std::endl;
 
     std::shared_ptr<afrl::cmasi::EntityState> entityStatePtr = std::make_shared<afrl::cmasi::EntityState>();
     entityStatePtr->setID(100);
@@ -425,9 +420,6 @@ namespace test
     entityStatePtr->setTime(350);
     service->m_currentEntityStates[entityStatePtr->getID()] = entityStatePtr;
 
-
-    std::cerr << "I got here 3" << std::endl;
-
     std::shared_ptr<afrl::cmasi::EntityState> entityStatePtr2 = std::make_shared<afrl::cmasi::EntityState>();
     entityStatePtr2->setID(101);
     afrl::cmasi::Location3D* _location = new afrl::cmasi::Location3D();
@@ -439,27 +431,12 @@ namespace test
     entityStatePtr2->setHeading(0.0f);
     entityStatePtr2->setGroundspeed(54.5f);
 
-
-    std::cerr << "I got here 4" << std::endl;
-
     std::vector<int64_t>& tasks2 = entityStatePtr2->getAssociatedTasks();
-
-    std::cerr << "I got here 5" << std::endl;
-
     tasks2.push_back(1);
-
-    std::cerr << "I got here 6" << std::endl;
-
     tasks2.push_back(2);
     entityStatePtr2->setTime(350);
 
-    std::cerr << "I got here 7" << std::endl;
-
-    std::cerr << "I got here 8" << std::endl;
     service->m_currentEntityStates[entityStatePtr2->getID()] = entityStatePtr2;
-
-
-    std::cerr << "I got here 9" << std::endl;
 
     std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> uniqueAutomationRequest = std::make_shared<uxas::messages::task::UniqueAutomationRequest>();
     service->m_uniqueAutomationRequests[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = uniqueAutomationRequest;
@@ -512,22 +489,11 @@ namespace test
     service->m_uniqueAutomationRequests[taskAssignmentSummary->getCorrespondingAutomationRequestID()]->getPlanningStates().push_back(planState4);
 
 
-    std::cerr << "I got here" + std::to_string(taskAssignmentSummary->getCorrespondingAutomationRequestID()) << std::endl;
-
     service->checkNextTaskImplementationRequest(5);
-
-     std::cerr << "I got here 2" + std::to_string(taskAssignmentSummary->getCorrespondingAutomationRequestID()) << std::endl;
-
 
     service->processTaskAssignmentSummary(taskAssignmentSummary);
 
-    Write_UniqueAutomationRequest_Map("Cpp_Process_Task_Assignment_Summary_Test.txt", service->m_uniqueAutomationRequests);
-
-    writeStateToFile("Cpp_Process_Task_Assignment_Summary_Test_ALl.txt", service);
-
-    std::cerr << "I am done" << std::endl;
-
-    // Write State to file
+    writeStateToFile("Cpp_Process_Task_Assignment_Summary_Test.txt", service);
     }
 
     void PlanBuilderTests::Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test ()
@@ -634,8 +600,6 @@ namespace test
     {
     auto service = uxas::stduxas::make_unique<uxas::service::PlanBuilderService>();
 
-    std::cerr << "I got here 1" << std::endl;
-
     std::vector< std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> > projectedStates;
     uxas::messages::task::PlanningState* state = new uxas::messages::task::PlanningState;
     afrl::cmasi::Location3D* location = new afrl::cmasi::Location3D();
@@ -647,8 +611,6 @@ namespace test
     state->setPlanningHeading(0.0);
     state->setEntityID(1);
 
-    std::cerr << "I got here 2" << std::endl;
-
     std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> projectedstate = std::make_shared<uxas::service::PlanBuilderService::ProjectedState>();
     projectedstate->setState(state);
     projectedStates.push_back(projectedstate);
@@ -659,7 +621,6 @@ namespace test
     waypoint2->setNumber(2);
 
     std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> Response_In_Progress = std::make_shared<uxas::messages::task::UniqueAutomationResponse>();;
-    std::cerr << "I got here 3" << std::endl;
 
     afrl::cmasi::MissionCommand* missioncommand1 = new afrl::cmasi::MissionCommand;
     afrl::cmasi::MissionCommand* missioncommand2 = new afrl::cmasi::MissionCommand;
@@ -671,7 +632,6 @@ namespace test
     Response_In_Progress->getOriginalResponse()->getMissionCommandList().push_back(missioncommand2);
 
     service->m_inProgressResponse[1] = Response_In_Progress;
-    std::cerr << "I got here 4" << std::endl;
 
     std::shared_ptr<afrl::impact::SpeedAltPair> SpeedAltPair_1 = std::make_shared<afrl::impact::SpeedAltPair>();
     SpeedAltPair_1->setVehicleID(1);
@@ -687,7 +647,6 @@ namespace test
     list.push_back(SpeedAltPair_1);
     list.push_back(SpeedAltPair_2);
     service->m_reqeustIDVsOverrides[1] = list;
-    std::cerr << "I got here 5" << std::endl;
 
     std::shared_ptr<afrl::impact::SpeedAltPair> SpeedAltPair_3  = std::make_shared<afrl::impact::SpeedAltPair>();
     SpeedAltPair_3->setVehicleID(2);
@@ -703,13 +662,8 @@ namespace test
     list2.push_back(SpeedAltPair_3);
     list2.push_back(SpeedAltPair_4);
     service->m_reqeustIDVsOverrides[2] = list2;
-    std::cerr << "I got here 6" << std::endl;
 
     service->checkNextTaskImplementationRequest(1);
-    std::cerr << "I got here 7" << std::endl;
-
-
-    // write to file
     }
 
 }; //namespace test

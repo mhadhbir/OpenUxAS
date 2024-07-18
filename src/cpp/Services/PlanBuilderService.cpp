@@ -1,16 +1,16 @@
 // ===============================================================================
 // Authors: AFRL/RQQA
 // Organization: Air Force Research Laboratory, Aerospace Systems Directorate, Power and Control Division
-// 
+//
 // Copyright (c) 2017 Government of the United State of America, as represented by
 // the Secretary of the Air Force.  No copyright is claimed in the United States under
 // Title 17, U.S. Code.  All Other Rights Reserved.
 // ===============================================================================
 
-/* 
+/*
  * File:   PlanBuilderService.cpp
  * Author: steve
- * 
+ *
  * Created on September 2, 2015, 6:17 PM
  */
 
@@ -125,14 +125,14 @@ PlanBuilderService::processReceivedLmcpMessage(std::unique_ptr<uxas::communicati
     {
         auto uniqueAutomationRequest = std::static_pointer_cast<uxas::messages::task::UniqueAutomationRequest>(receivedLmcpMessage->m_object);
         m_uniqueAutomationRequests[uniqueAutomationRequest->getRequestID()] = uniqueAutomationRequest;
-        
+
         // re-initialize state maps (possibly halt completion of over-ridden automation request)
         m_assignmentSummaries[uniqueAutomationRequest->getRequestID()] = std::shared_ptr<uxas::messages::task::TaskAssignmentSummary>(nullptr);
         m_projectedEntityStates[uniqueAutomationRequest->getRequestID()] = std::vector< std::shared_ptr<ProjectedState> >();
         m_remainingAssignments[uniqueAutomationRequest->getRequestID()] = std::deque< std::shared_ptr<uxas::messages::task::TaskAssignment> >();
         m_inProgressResponse[uniqueAutomationRequest->getRequestID()] = std::shared_ptr<uxas::messages::task::UniqueAutomationResponse>(nullptr);
     }
-    
+
     return (false); // always false implies never terminating service from here
 };
 
@@ -149,8 +149,6 @@ void PlanBuilderService::sendError(std::string& errMsg)
 
 void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas::messages::task::TaskAssignmentSummary>& taskAssignmentSummary)
 {
-    std::cerr << "I am in" << std::endl;
-
     // validate that this summary corresponds to an existing unique automation request
     auto correspondingAutomationRequest = std::make_shared<uxas::messages::task::UniqueAutomationRequest>();
     auto found = m_uniqueAutomationRequests.find(taskAssignmentSummary->getCorrespondingAutomationRequestID());
@@ -172,48 +170,42 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
         sendError(message);
         return;
     }
-    
+
     if (taskAssignmentSummary->getTaskList().empty())
     {
         std::string message = "No assignments found for request " + std::to_string(taskAssignmentSummary->getCorrespondingAutomationRequestID());
         sendError(message);
         return;
     }
-    
+
     // ensure that a valid state for each vehicle in the request has been received
     for(auto v : correspondingAutomationRequest->getOriginalRequest()->getEntityList())
     {
-        std::cerr << "I am in 1" << std::endl;
         auto found = m_currentEntityStates.find(v);
         if(found == m_currentEntityStates.end())
         {
-            std::cerr << "I am in error" << std::endl;
             std::string message = "ERROR::processTaskAssignmentSummary: Corresponding Unique Automation Request included vehicle ID [";
             message += std::to_string(v) + "] which does not have a corresponding current state!";
             std::cerr << message  << std::endl;
             return;
         }
     }
-    std::cerr << "I am in 1" << std::endl;
 
-    
     // initialize state tracking maps with this corresponding request IDs
     m_assignmentSummaries[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = taskAssignmentSummary;
     m_projectedEntityStates[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = std::vector< std::shared_ptr<ProjectedState> >();
     m_remainingAssignments[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = std::deque< std::shared_ptr<uxas::messages::task::TaskAssignment> >();
     m_inProgressResponse[taskAssignmentSummary->getCorrespondingAutomationRequestID()] = std::make_shared<uxas::messages::task::UniqueAutomationResponse>();
     m_inProgressResponse[taskAssignmentSummary->getCorrespondingAutomationRequestID()]->setResponseID(taskAssignmentSummary->getCorrespondingAutomationRequestID());
-    
-    std::cerr << "I am in 2" << std::endl;
+
     // list all participating vehicles in the assignment
     std::vector<int64_t> participatingVehicles = correspondingAutomationRequest->getOriginalRequest()->getEntityList();
     if(participatingVehicles.empty())
     {
-        std::cerr << "I am in 3" << std::endl;
         for(auto v: m_currentEntityStates)
             participatingVehicles.push_back(v.first);
     }
-    
+
     // load current participating vehicle states into projected state tracking
     for(auto vID : participatingVehicles)
     {
@@ -221,7 +213,6 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
         auto projectedState = std::make_shared<ProjectedState>();
         projectedState->finalWaypointID = 0;
         projectedState->time = entityState->getTime();
-        std::cerr << "I am in 4" << std::endl;
         auto usePlanningState = std::find_if(correspondingAutomationRequest->getPlanningStates().begin(), correspondingAutomationRequest->getPlanningStates().end(),
                                             [&](uxas::messages::task::PlanningState* state) { return state->getEntityID() == vID; });
         if(usePlanningState != correspondingAutomationRequest->getPlanningStates().end())
@@ -235,7 +226,7 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
             planState->setEntityID(vID);
             planState->setPlanningPosition(entityState->getLocation()->clone());
             planState->setPlanningHeading(entityState->getHeading());
-            
+
             uxas::common::utilities::CUnitConversions unitConversions;
             double north_m(0.0);
             double east_m(0.0);
@@ -251,19 +242,18 @@ void PlanBuilderService::processTaskAssignmentSummary(const std::shared_ptr<uxas
             unitConversions.ConvertNorthEast_mToLatLong_deg(north_m, east_m, latitude_deg, longitude_deg);
             planState->getPlanningPosition()->setLatitude(latitude_deg);
             planState->getPlanningPosition()->setLongitude(longitude_deg);
-            
+
             projectedState->setState(planState);
         }
-        std::cerr << "I am in 5" << std::endl;                    
         m_projectedEntityStates[taskAssignmentSummary->getCorrespondingAutomationRequestID()].push_back(projectedState);
     }
-    
+
     // queue up all task assignments to be made
     for(auto t : taskAssignmentSummary->getTaskList())
     {
         m_remainingAssignments[taskAssignmentSummary->getCorrespondingAutomationRequestID()].push_back(std::shared_ptr<uxas::messages::task::TaskAssignment>(t->clone()));
     }
-    
+
     sendNextTaskImplementationRequest(taskAssignmentSummary->getCorrespondingAutomationRequestID());
 }
 
@@ -274,7 +264,7 @@ bool PlanBuilderService::sendNextTaskImplementationRequest(int64_t uniqueRequest
     if(m_remainingAssignments[uniqueRequestID].empty())
         return false;
     auto taskAssignment = m_remainingAssignments[uniqueRequestID].front();
-    
+
     auto planState = std::find_if(m_projectedEntityStates[uniqueRequestID].begin(), m_projectedEntityStates[uniqueRequestID].end(),
                                   [&](std::shared_ptr<ProjectedState> state)
                                   { return( (!state || !(state->state)) ? false : (state->state->getEntityID() == taskAssignment->getAssignedVehicle()) ); });
@@ -305,7 +295,7 @@ bool PlanBuilderService::sendNextTaskImplementationRequest(int64_t uniqueRequest
             taskImplementationRequest->getNeighborLocations().push_back(neighbor->state->clone());
         }
     }
-    
+
     m_remainingAssignments[uniqueRequestID].pop_front();
     sendSharedLmcpObjectBroadcastMessage(taskImplementationRequest);
     return true;
@@ -317,7 +307,7 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
     if(m_expectedResponseID.find(taskImplementationResponse->getResponseID()) == m_expectedResponseID.end())
         return;
     int64_t uniqueRequestID = m_expectedResponseID[taskImplementationResponse->getResponseID()];
-    
+
     // cache response (waypoints in m_inProgressResponse)
     if(m_inProgressResponse.find(uniqueRequestID) == m_inProgressResponse.end())
         return;
@@ -325,7 +315,7 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
         return;
     if(!m_inProgressResponse[uniqueRequestID]->getOriginalResponse())
         return;
-    
+
     if(taskImplementationResponse->getTaskWaypoints().empty())
     {
         // task cannot be completed (e.g. inside a no-fly zone)
@@ -334,12 +324,12 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
         errMsg += " assigned to vehicle [" + std::to_string(taskImplementationResponse->getVehicleID()) + "]";
         errMsg += " reported an empty waypoint list for implementation!";
         sendError(errMsg);
-        
+
         // legacy: still try to complete the request, just skipping this task
         checkNextTaskImplementationRequest(uniqueRequestID);
         return;
     }
-    
+
     auto corrMish = std::find_if(m_inProgressResponse[uniqueRequestID]->getOriginalResponse()->getMissionCommandList().begin(), m_inProgressResponse[uniqueRequestID]->getOriginalResponse()->getMissionCommandList().end(),
                                 [&](afrl::cmasi::MissionCommand* mish) { return mish->getVehicleID() == taskImplementationResponse->getVehicleID(); });
 
@@ -359,7 +349,7 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
         {
             for (auto speedAltPair : requestID.second)
             {
-                if (speedAltPair->getVehicleID() == taskImplementationResponse->getVehicleID() && 
+                if (speedAltPair->getVehicleID() == taskImplementationResponse->getVehicleID() &&
                     (speedAltPair->getTaskID() == taskImplementationResponse->getTaskID() || speedAltPair->getTaskID() == 0))
                 {
                     for (auto wp : taskImplementationResponse->getTaskWaypoints())
@@ -407,7 +397,7 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
         }
         m_inProgressResponse[uniqueRequestID]->getOriginalResponse()->getMissionCommandList().push_back(mish);
     }
-    
+
     // update project state (m_projectedEntityStates)
     if(m_projectedEntityStates.find(uniqueRequestID) != m_projectedEntityStates.end())
     {
@@ -421,9 +411,9 @@ void PlanBuilderService::processTaskImplementationResponse(const std::shared_ptr
             (*projectedState)->state->setPlanningHeading(taskImplementationResponse->getFinalHeading());
         }
     }
-                                
+
     checkNextTaskImplementationRequest(uniqueRequestID);
-    
+
 };
 
 void PlanBuilderService::checkNextTaskImplementationRequest(int64_t uniqueRequestID)
@@ -499,7 +489,7 @@ void PlanBuilderService::AddLoitersToMissionCommands(std::shared_ptr<uxas::messa
     }
     if (containsLoiter)
         return;
-    
+
     //make sure every mission command is for the same vehicle
     auto targetVehicle = response->getOriginalResponse()->getMissionCommandList().front()->getVehicleID();
     if (!std::all_of(response->getOriginalResponse()->getMissionCommandList().begin(),
@@ -514,7 +504,7 @@ void PlanBuilderService::AddLoitersToMissionCommands(std::shared_ptr<uxas::messa
     {
         return;
     }
-    
+
     auto la = new afrl::cmasi::LoiterAction();
     auto back = response->getOriginalResponse()->getMissionCommandList().back()->getWaypointList().back();
 

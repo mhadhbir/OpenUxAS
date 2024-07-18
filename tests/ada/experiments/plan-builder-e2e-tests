@@ -13,8 +13,11 @@ mkdir -p "${SCRIPT_DIR}/bin"
 (
     cd "${OPENUXAS_ROOT}"
     make test -j
-    mv test-uxas "${SCRIPT_DIR}/bin"
+    cp test-uxas "${SCRIPT_DIR}/bin"
 )
+
+# Remove the output directory
+rm -rf "${SCRIPT_DIR}/output"
 
 # Create the output directory
 mkdir -p "${SCRIPT_DIR}/output"
@@ -45,6 +48,4 @@ mkdir -p "${SCRIPT_DIR}/output"
 activate_venv
 
 echo "TODO: add python call to compare the C++ and Ada test results"
-# e.g.:
-#   python3 "${SCRIPT_DIR}/diff.py"
-# with appropriate argument handling in the python
+python3 "${SCRIPT_DIR}/scripts/diff.py" "${SCRIPT_DIR}/output/Cpp_Process_Task_Assignment_Summary_Test.txt" "${SCRIPT_DIR}/output/Ada_Process_Task_Assignment_Summary_Test.txt"
