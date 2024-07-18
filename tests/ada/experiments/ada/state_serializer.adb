@@ -21,9 +21,9 @@ package body State_Serializer is
       return To_Unbounded_String("PlanningState: EntityID => " & Int64'Image (Planning_State.EntityID) &
              ", Latitude => " & Real64'Image (Planning_State.PlanningPosition.Latitude) &
              ", Longitude => " & Real64'Image (Planning_State.PlanningPosition.Longitude) &
-             ", Altitude => " & Real32'Image (Planning_State.PlanningPosition.Altitude) &
-             ", AltitudeType => " & AltitudeTypeEnum'Image (Planning_State.PlanningPosition.AltitudeType) &
-             ", Heading => " & Real32'Image (Planning_State.PlanningHeading));
+             ", Altitude => " & Real64'Image (Real64 (Planning_State.PlanningPosition.Altitude)) &
+             ", AltitudeType => " & Integer'Image( AltitudeTypeEnum'Enum_Rep (Planning_State.PlanningPosition.AltitudeType)) &
+             ", Heading => " & Real64'Image (Real64 (Planning_State.PlanningHeading)));
    end PlanningState_To_String;
 
    -- Procedure to write PlanningState_Seq to file
@@ -79,7 +79,7 @@ package body State_Serializer is
    function VehicleAction_To_String
      (VA : VehicleAction) return Unbounded_String is
    begin
-      return Int64_Seq_To_String (VA.AssociatedTaskList);
+      return ", VA => " & Int64_Seq_To_String (VA.AssociatedTaskList);
    end VehicleAction_To_String;
 
    -- Procedure to write VehicleActionCommand_Seq to file
@@ -100,7 +100,7 @@ package body State_Serializer is
       return To_Unbounded_String("VehicleActionCommand: CommandId => " & Int64'Image (Command.CommandId) &
              ", VehicleId => " & Int64'Image (Command.VehicleId)) &
              VA_Seq_To_String (Command.VehicleActionList) &
-             To_Unbounded_String(", Status => " & CommandStatusTypeEnum'Image (Command.Status));
+             To_Unbounded_String(", Status => " & Integer'Image (CommandStatusTypeEnum'Enum_Rep (Command.Status)));
    end VehicleActionCommand_To_String;
 
       -- Procedure to write VehicleActionCommand_Seq to file
@@ -121,13 +121,13 @@ package body State_Serializer is
       return To_Unbounded_String ("Waypoint: Number => " & Int64'Image (WP.Number) &
          ", Latitude => " & Real64'Image (WP.Latitude) &
          ", Longitude => " & Real64'Image (WP.Longitude) &
-         ", Altitude => " & Real32'Image (WP.Altitude) &
-         ", AltitudeType => " & AltitudeTypeEnum'Image (WP.AltitudeType) &
+         ", Altitude => " & Real64'Image (Real64 (WP.Altitude)) &
+         ", AltitudeType => " & Integer'Image (AltitudeTypeEnum'Enum_Rep (WP.AltitudeType)) &
          ", NextWaypoint => " & Int64'Image (WP.NextWaypoint) &
-         ", Speed => " & Real32'Image (WP.Speed) &
-         ", SpeedType => " & SpeedTypeEnum'Image (WP.SpeedType) &
-         ", ClimbRate => " & Real32'Image (WP.ClimbRate) &
-         ", TurnType => " & TurnTypeEnum'Image (WP.TurnType) &
+         ", Speed => " & Real64'Image (Real64 (WP.Speed)) &
+         ", SpeedType => " & Integer'Image (SpeedTypeEnum'Enum_Rep (WP.SpeedType)) &
+         ", ClimbRate => " & Real64'Image (Real64 (WP.ClimbRate)) &
+         ", TurnType => " & Integer'Image (TurnTypeEnum'Enum_Rep (WP.TurnType)) &
          ", ContingencyWaypointA => " & Int64'Image (WP.ContingencyWaypointA) &
          ", ContingencyWaypointB => " & Int64'Image (WP.ContingencyWaypointB)) &
          VA_Seq_To_String (WP.VehicleActionList) &
@@ -152,7 +152,7 @@ package body State_Serializer is
       return To_Unbounded_String("MissionCommand: CommandId => " & Int64'Image (Command.CommandId) &
              ", VehicleId => " & Int64'Image (Command.VehicleId)) &
              VA_Seq_To_String (Command.VehicleActionList) &
-             To_Unbounded_String(", Status => " & CommandStatusTypeEnum'Image (Command.Status)) &
+             To_Unbounded_String(", Status => " & Integer'Image (CommandStatusTypeEnum'Enum_Rep (Command.Status))) &
              WP_Seq_To_String (Command.WaypointList) &
             To_Unbounded_String(", FirstWaypoint => " & Int64'Image (Command.FirstWaypoint));
    end MissionCommand_To_String;
@@ -313,15 +313,10 @@ package body State_Serializer is
       return To_Unbounded_String ("EntityState: Id => " & Int64'Image (Entity_State.Id) &
              ", Latitude => " & Real64'Image (Entity_State.Location.Latitude) &
              ", Longitude => " & Real64'Image (Entity_State.Location.Longitude) &
-             ", Altitude => " & Real32'Image (Entity_State.Location.Altitude) &
-             ", AltitudeType => " & AltitudeTypeEnum'Image (Entity_State.Location.AltitudeType) &
-             ", Heading => " & Real32'Image (Entity_State.Heading) &
-             ", Time => " & Int64'Image (Entity_State.Time) &
-             ", GroundSpeed => " & Real32'Image (Entity_State.GroundSpeed) &
-             ", isGroundVehicleState => " & Boolean'Image (Entity_State.isGroundVehicleState) &
-             ", isAirVehicleState => " & Boolean'Image (Entity_State.isAirVehicleState) &
-             ", isStationarySensorState => " & Boolean'Image (Entity_State.isStationarySensorState) &
-             ", isSurfaceVehicleState => " & Boolean'Image (Entity_State.isSurfaceVehicleState));
+             ", Altitude => " & Real64'Image (Real64 (Entity_State.Location.Altitude)) &
+             ", AltitudeType => " & Integer'Image (AltitudeTypeEnum'Enum_Rep (Entity_State.Location.AltitudeType)) &
+             ", Heading => " & Real64'Image (Real64 (Entity_State.Heading)) &
+             ", Time => " & Int64'Image (Entity_State.Time));
    end EntityState_To_String;
 
    -- Procedure to write EntityState_Map to file
@@ -342,9 +337,9 @@ package body State_Serializer is
    begin
       return To_Unbounded_String ("SpeedAltPair: VehicleID => " & Int64'Image (SAP.VehicleID) &
              ", TaskID => " & Int64'Image (SAP.TaskID) &
-             ", Speed => " & Real32'Image (SAP.Speed) &
-             ", Altitude => " & Real32'Image (SAP.Altitude) &
-             ", AltitudeType => " & AltitudeTypeEnum'Image (SAP.AltitudeType));
+             ", Speed => " & Real64'Image (Real64 (SAP.Speed)) &
+             ", Altitude => " & Real64'Image (Real64 (SAP.Altitude)) &
+             ", AltitudeType => " & Integer'Image (AltitudeTypeEnum'Enum_Rep (SAP.AltitudeType)));
    end SpeedAltPair_To_String;
 
    -- Procedure to write SpeedAltPair_Seq to file
@@ -383,27 +378,27 @@ package body State_Serializer is
       -- Write the content of m_uniqueAutomationRequests
       Write_String_To_File (File, To_Unbounded_String ("m_uniqueAutomationRequests:"));
       Write_UniqueAutomationRequest_Map (File, State.m_uniqueAutomationRequests);
-      
+
       -- Write the content of UniqueAutomationResponse_Map
       Write_String_To_File (File, To_Unbounded_String ("UniqueAutomationResponse_Map:"));
       Write_UniqueAutomationResponse_Map (File, State.m_inProgressResponse);
-   
+
       -- Write the content of UniqueAutomationResponse_Map
       Write_String_To_File (File, To_Unbounded_String ("m_assignmentSummaries:"));
-      Write_TaskAssignmentSummary_Map (File, State.m_assignmentSummaries);   
+      Write_TaskAssignmentSummary_Map (File, State.m_assignmentSummaries);
 
       -- Write the content of m_projectedEntityStates
       Write_String_To_File (File, To_Unbounded_String ("m_projectedEntityStates:"));
-      Write_ProjectedState_Map (File, State.m_projectedEntityStates);   
+      Write_ProjectedState_Map (File, State.m_projectedEntityStates);
 
       -- Write the content of m_remainingAssignments
       Write_String_To_File (File, To_Unbounded_String ("m_remainingAssignments:"));
-      Write_RemainingTaskAssignement_Map (File, State.m_remainingAssignments);   
+      Write_RemainingTaskAssignement_Map (File, State.m_remainingAssignments);
 
 
       -- Write the content of m_remainingAssignments
       Write_String_To_File (File, To_Unbounded_String ("m_expectedResponseID:"));
-      Write_Int64_Map (File, State.m_expectedResponseID); 
+      Write_Int64_Map (File, State.m_expectedResponseID);
 
       -- Write the content of EntityState_Map
       Write_String_To_File (File, To_Unbounded_String ("EntityState_Map:"));

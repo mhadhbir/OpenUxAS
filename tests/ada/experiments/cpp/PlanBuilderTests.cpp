@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <iomanip>
 
 namespace uxas
 {
@@ -11,9 +12,10 @@ namespace service
 namespace test
 {
 
-    std::string PlanningState_To_String(uxas::messages::task::PlanningState* state) {
+    std::string PlanBuilderTests::PlanningState_To_String(uxas::messages::task::PlanningState* state) {
     std::ostringstream oss;
-    oss << std::fixed; // Set precision for floating-point numbers
+    oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+    oss.precision(14);
     oss << "PlanningState: EntityID => " << state->getEntityID()
         << ", Latitude => " << state->getPlanningPosition()->getLatitude()
         << ", Longitude => " << state->getPlanningPosition()->getLongitude()
@@ -23,7 +25,7 @@ namespace test
     return oss.str();
     }
 
-    std::string PlanningState_Seq_To_String(std::vector<uxas::messages::task::PlanningState*> & states) {
+    std::string PlanBuilderTests::PlanningState_Seq_To_String(std::vector<uxas::messages::task::PlanningState*> & states) {
     std::ostringstream oss;
     for (auto element : states) {
         oss << PlanningState_To_String(element);
@@ -31,17 +33,20 @@ namespace test
     return oss.str();
     }
 
-    std::string Int64_Seq_To_String(const std::vector<int64_t> seq) {
+    std::string PlanBuilderTests::Int64_Seq_To_String(std::vector<int64_t>& seq) {
     std::ostringstream oss;
+    oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+    oss.precision(14);
     for (auto element : seq) {
         oss << " " + element; // Convert each int64_t to string and append to stream
     }
     return oss.str();
     }
 
-    std::string UniqueAutomationRequest_To_String(std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> request) {
+    std::string PlanBuilderTests::UniqueAutomationRequest_To_String(std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> request) {
     std::ostringstream oss;
-    oss.setf(std::ios_base::boolalpha);
+    oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+    oss.precision(14);
     oss << "UniqueAutomationRequest: RequestID => " << request->getRequestID()
         << ", OperatingRegion => " << request->getOriginalRequest()->getOperatingRegion()
         << ", TaskRelationships => " << request->getOriginalRequest()->getTaskRelationships()
@@ -53,49 +58,340 @@ namespace test
     return oss.str();
     }
 
-    void writeStringToFile(const std::string& filename, const std::string& content) {
-    // Create an output file stream (ofstream) object
+    void PlanBuilderTests::Write_String_To_File(const std::string filename, const std::string& content) {
     std::ofstream outFile;
-
-    // Open the file (trunc mode will clear existing content)
-    outFile.open(filename, std::ios::out | std::ios::trunc);
-
-    // Check if the file is open
+    outFile.setf(std::ios::scientific | std::ios::uppercase);
+    outFile.open(filename, std::ios::out | std::ios::app);
     if (!outFile.is_open()) {
         std::cerr << "Error opening file: " << filename << std::endl;
         return;
     }
-
-    // Write the content to the file
-    outFile << content;
-
-    // Close the file
+    outFile << std::fixed << std::setprecision(14) << content;
+    outFile << "\n";
     outFile.close();
+    }
 
-    // Inform the user that the content was written successfully
-    std::cout << "Content written to file: " << filename << std::endl;
-}
-
-    void Write_UniqueAutomationRequest_Map(const std::string& filename, std::unordered_map<int64_t, std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> > map)
+    void PlanBuilderTests::Write_UniqueAutomationRequest_Map(const std::string filename, std::unordered_map<int64_t, std::shared_ptr<uxas::messages::task::UniqueAutomationRequest> > map)
     {
-        for (const auto& pair : map) {
-            writeStringToFile (filename, UniqueAutomationRequest_To_String(pair.second));
+        for (auto& pair : map) {
+            Write_String_To_File (filename, UniqueAutomationRequest_To_String(pair.second));
         }
     }
 
-    std::string VehicleAction_To_String(afrl::cmasi::VehicleAction* va)
+    std::string PlanBuilderTests::VehicleAction_To_String(afrl::cmasi::VehicleAction* va)
     {
         std::ostringstream oss;
-        oss << Int64_Seq_To_String(va->getAssociatedTaskList());
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << ", VA => " + Int64_Seq_To_String(va->getAssociatedTaskList());
         return oss.str();
     }
 
-  void writeStateToFile(uxas::service::PlanBuilderService service)
-    {
+    std::string PlanBuilderTests::VA_Seq_To_String(std::vector<afrl::cmasi::VehicleAction*>& seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            oss <<  VehicleAction_To_String(element);
+        }
+        return oss.str();
     }
+
+    std::string PlanBuilderTests::VehicleActionCommand_To_String(afrl::cmasi::VehicleActionCommand* command) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "VehicleActionCommand: CommandId => " << command->getCommandID() <<
+                         ", VehicleId => " << command->getVehicleID() <<
+                         VA_Seq_To_String(command->getVehicleActionList()) <<
+                         ", Status => " << command->getStatus();
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::VehicleActionCommand_Seq_To_String(std::vector< afrl::cmasi::VehicleActionCommand* > seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            oss <<  VehicleActionCommand_To_String(element);
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::WayPoint_To_String(afrl::cmasi::Waypoint* wp) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "Waypoint: Number => " << wp->getNumber() <<
+                            ", Latitude => " << wp->getLatitude() <<
+                            ", Longitude => " << wp->getLongitude() <<
+                            ", Altitude => " << wp->getAltitude() <<
+                            ", AltitudeType => " << wp->getAltitudeType() <<
+                            ", NextWaypoint => " << wp->getNextWaypoint() <<
+                            ", Speed => " << wp->getSpeed() <<
+                            ", SpeedType => " << wp->getSpeedType() <<
+                            ", ClimbRate => " << wp->getClimbRate() <<
+                            ", TurnType => " << wp->getTurnType() <<
+                            ", ContingencyWaypointA => " << wp->getContingencyWaypointA() <<
+                            ", ContingencyWaypointB => " << wp->getContingencyWaypointB() <<
+                            VA_Seq_To_String(wp->getVehicleActionList()) <<
+                            Int64_Seq_To_String(wp->getAssociatedTasks());
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::WP_Seq_To_String(std::vector<afrl::cmasi::Waypoint*>& seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            oss <<  WayPoint_To_String(element);
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::MissionCommand_To_String(afrl::cmasi::MissionCommand* command) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "MissionCommand: CommandId => " << command->getCommandID() <<
+                            ", VehicleId => " << command->getVehicleID() <<
+                            VA_Seq_To_String(command->getVehicleActionList()) <<
+                            ", Status => " << command->getStatus() <<
+                            WP_Seq_To_String(command->getWaypointList()) <<
+                            ", FirstWaypoint => " << command->getFirstWaypoint();
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::MissionCommand_Seq_To_String(std::vector<afrl::cmasi::MissionCommand*>& seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            oss <<  MissionCommand_To_String(element);
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::KVP_Seq_To_String(std::vector<afrl::cmasi::KeyValuePair*> seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto& element : seq) {
+            oss << element->getKey() << element->getValue();
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::UniqueAutomationResponse_To_String(std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> response) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "UniqueAutomationResponse: ResponseID => " << response->getResponseID() <<
+                            MissionCommand_Seq_To_String(response->getOriginalResponse()->getMissionCommandList()) <<
+                            VehicleActionCommand_Seq_To_String(response->getOriginalResponse()->getVehicleCommandList()) <<
+                            KVP_Seq_To_String(response->getOriginalResponse()->getInfo()) <<
+                            PlanningState_Seq_To_String(response->getFinalStates());
+        return oss.str();
+    }
+
+    void PlanBuilderTests::Write_UniqueAutomationResponse_Map(std::string file, std::unordered_map<int64_t, std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, UniqueAutomationResponse_To_String(pair.second));
+        }
+    }
+
+    std::string PlanBuilderTests::TaskAssignment_To_String(std::shared_ptr<uxas::messages::task::TaskAssignment> task_assignment) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "TaskAssignment: TaskID => " << task_assignment->getTaskID() +
+                            ", OptionID => " << task_assignment->getOptionID() +
+                            ", AssignedVehicle => " << task_assignment->getAssignedVehicle() <<
+                            ", TimeThreshold => " << task_assignment->getTimeThreshold() <<
+                            ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::TaskAssignment_Seq_To_String(std::deque< std::shared_ptr<uxas::messages::task::TaskAssignment> > seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            if (element) {
+                oss << TaskAssignment_To_String(element);
+            }
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::TaskAssignment_ptr_To_String(uxas::messages::task::TaskAssignment* task_assignment) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "TaskAssignment: TaskID => "  << task_assignment->getTaskID() <<
+                            ", OptionID => " << task_assignment->getOptionID() <<
+                            ", AssignedVehicle => " << task_assignment->getAssignedVehicle() <<
+                            ", TimeThreshold => " << task_assignment->getTimeThreshold() <<
+                            ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::TaskAssignment_Vect_To_String(std::vector<uxas::messages::task::TaskAssignment*> seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            if (element) {
+                oss << TaskAssignment_ptr_To_String(element);
+            }
+        }
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::TaskAssignmentSummary_To_String(std::shared_ptr<uxas::messages::task::TaskAssignmentSummary> task_assignment_summary) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "TaskAssignmentSummary: CorrespondingAutomationRequestID => " << task_assignment_summary->getCorrespondingAutomationRequestID() <<
+                            ", OperatingRegion => " << task_assignment_summary->getOperatingRegion() <<
+                            TaskAssignment_Vect_To_String(task_assignment_summary->getTaskList());
+        return oss.str();
+    }
+
+    void PlanBuilderTests::Write_TaskAssignmentSummary_Map(std::string file, std::unordered_map<int64_t, std::shared_ptr<uxas::messages::task::TaskAssignmentSummary> > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, TaskAssignmentSummary_To_String(pair.second));
+        }
+    }
+
+    std::string PlanBuilderTests::ProjectedState_To_String(std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> state) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "ProjectedState: FinalWaypointID => " << state->finalWaypointID <<
+                            ", Time => " << state->time <<
+                            PlanningState_To_String(state->state);
+        return oss.str();
+    }
+
+    std::string PlanBuilderTests::ProjectedState_Seq_To_String(std::vector< std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> >& seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            if (element) {
+                oss << ProjectedState_To_String(element);
+            }
+        }
+        return oss.str();
+    }
+
+    void PlanBuilderTests::Write_ProjectedState_Map(std::string file, std::unordered_map< int64_t, std::vector< std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> > > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, ProjectedState_Seq_To_String(pair.second));
+        }
+    }
+
+    void PlanBuilderTests::Write_RemainingTaskAssignement_Map(std::string file, std::unordered_map< int64_t, std::deque< std::shared_ptr<uxas::messages::task::TaskAssignment> > > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, TaskAssignment_Seq_To_String(pair.second));
+        }
+    }
+
+    void PlanBuilderTests::Write_Int64_Map(std::string file, std::unordered_map< int64_t, int64_t > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, std::to_string(pair.second));
+        }
+    }
+
+    std::string PlanBuilderTests::EntityState_To_String(std::shared_ptr<afrl::cmasi::EntityState> entity_state) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "EntityState: Id => " << entity_state->getID() <<
+                            ", Latitude => " << entity_state->getLocation()->getLatitude() <<
+                            ", Longitude => " << entity_state->getLocation()->getLongitude() <<
+                            ", Altitude => " << entity_state->getLocation()->getAltitude() <<
+                            ", AltitudeType => " << entity_state->getLocation()->getAltitudeType() <<
+                            ", Heading => " << entity_state->getHeading() <<
+                            ", Time => " << entity_state->getTime();
+        return oss.str();
+    }
+
+    void PlanBuilderTests::Write_EntityState_Map(std::string file, std::unordered_map< int64_t, std::shared_ptr<afrl::cmasi::EntityState> > map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, EntityState_To_String(pair.second));
+        }
+    }
+
+    std::string PlanBuilderTests::SpeedAltPair_To_String(std::shared_ptr<afrl::impact::SpeedAltPair> sap) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        oss << "SpeedAltPair: VehicleID => " << sap->getVehicleID() <<
+                         ", TaskID => " << sap->getTaskID() <<
+                         ", Speed => " << sap->getSpeed() <<
+                         ", Altitude => " << sap->getAltitude() <<
+                         ", AltitudeType => " << sap->getAltitudeType();
+    return oss.str();
+    }
+
+    std::string PlanBuilderTests::SpeedAltPair_Seq_To_String(std::list<std::shared_ptr<afrl::impact::SpeedAltPair>>& seq) {
+        std::ostringstream oss;
+        oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
+        oss.precision(14);
+        for (auto element : seq) {
+            oss << " " << SpeedAltPair_To_String(element); // Convert each int64_t to string and append to stream
+        }
+        return oss.str();
+    }
+
+    void PlanBuilderTests::Write_ReqeustIDVsOverrides_Map(std::string file, std::unordered_map< int64_t, std::list<std::shared_ptr<afrl::impact::SpeedAltPair>>> map) {
+        for (auto& pair : map)  {
+            Write_String_To_File(file, SpeedAltPair_Seq_To_String(pair.second));
+        }
+    }
+
+    void PlanBuilderTests::writeStateToFile(const std::string File, uxas::service::PlanBuilderService* service)
+    {
+        std::cerr << "I am inside write" << std::endl;
+
+        // Write the content of m_uniqueAutomationRequests
+        Write_String_To_File (File, "m_uniqueAutomationRequests:");
+        Write_UniqueAutomationRequest_Map (File, service->m_uniqueAutomationRequests);
+
+        // Write the content of UniqueAutomationResponse_Map
+        Write_String_To_File (File, "UniqueAutomationResponse_Map:");
+        Write_UniqueAutomationResponse_Map (File, service->m_inProgressResponse);
+
+        // Write the content of UniqueAutomationResponse_Map
+        Write_String_To_File (File, "m_assignmentSummaries:");
+        Write_TaskAssignmentSummary_Map (File, service->m_assignmentSummaries);
+
+        // Write the content of m_projectedEntityStates
+        Write_String_To_File (File, "m_projectedEntityStates:");
+        Write_ProjectedState_Map (File, service->m_projectedEntityStates);
+
+        // Write the content of m_remainingAssignments
+        Write_String_To_File (File, "m_remainingAssignments:");
+        Write_RemainingTaskAssignement_Map (File, service->m_remainingAssignments);
+
+        // Write the content of m_remainingAssignments
+        Write_String_To_File (File, "m_expectedResponseID:");
+        Write_Int64_Map (File, service->m_expectedResponseID);
+
+        // Write the content of EntityState_Map
+        Write_String_To_File (File, "EntityState_Map:");
+        Write_EntityState_Map (File, service->m_currentEntityStates);
+
+        // Write the content of EntityState_Map
+        Write_String_To_File (File, "m_reqeustIDVsOverrides:");
+        Write_ReqeustIDVsOverrides_Map (File, service->m_reqeustIDVsOverrides);
+    }
+
     void PlanBuilderTests::Process_Task_Assignment_Summary_Test ()
     {
-    auto service = uxas::stduxas::make_unique<uxas::service::PlanBuilderService>();
+    uxas::service::PlanBuilderService* service = new uxas::service::PlanBuilderService();
 
     std::cerr << "I got here 1" << std::endl;
     std::shared_ptr<uxas::messages::task::TaskAssignmentSummary> taskAssignmentSummary = std::make_shared<uxas::messages::task::TaskAssignmentSummary>();
@@ -226,6 +522,8 @@ namespace test
     service->processTaskAssignmentSummary(taskAssignmentSummary);
 
     Write_UniqueAutomationRequest_Map("Cpp_Process_Task_Assignment_Summary_Test.txt", service->m_uniqueAutomationRequests);
+
+    writeStateToFile("Cpp_Process_Task_Assignment_Summary_Test_ALl.txt", service);
 
     std::cerr << "I am done" << std::endl;
 

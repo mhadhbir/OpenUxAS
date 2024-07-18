@@ -53,6 +53,8 @@ package body PlanBuilderTest is
          Automation_Request.PlanningStates := Add (Automation_Request.PlanningStates, Planning_State_4);
       end;
 
+      Automation_Request.RequestID := 1;
+
       Insert (State.m_uniqueAutomationRequests, Common.Int64 (1), Automation_Request);
 
       Process_Task_Assignment_Summary (State, Config, Mailbox, Message);
