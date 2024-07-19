@@ -99,24 +99,26 @@ package body Plan_Builder with SPARK_Mode is
                if Get (Corresponding_Automation_Request.PlanningStates, P).EntityID = VehicleID then
                   Found_State := True;
                   Projected_State.State := Get (Corresponding_Automation_Request.PlanningStates, P);
-               end if;
-               if not Found_State then
-                  Planning_State.EntityID := VehicleID;
-                  Planning_State.PlanningPosition := Get (State.m_currentEntityStates, VehicleID).Location;
-                  Planning_State.PlanningHeading := Get (State.m_currentEntityStates, VehicleID).Heading;
-                  Convert_LatLong_Degrees_To_NorthEast_Meters (Converter, Get (State.m_currentEntityStates, VehicleID).Location.Latitude, Get (State.m_currentEntityStates, VehicleID).Location.Longitude, North_M, East_M);
-                  North_M := North_M + Config.m_assignmentStartPointLead_m * (Cos (Real64 (Get (State.m_currentEntityStates, VehicleID).Heading)) * dDegreesToRadians);
-                  East_M := East_M + Config.m_assignmentStartPointLead_m * (Sin (Real64 (Get (State.m_currentEntityStates, VehicleID).Heading)) * dDegreesToRadians);
-                  Convert_NorthEast_Meters_To_LatLong_Degrees (Converter, North_M, East_M, Latitude_Deg, Longitude_Deg);
-                  Planning_State.PlanningPosition.Latitude := Latitude_Deg;
-                  Planning_State.PlanningPosition.Longitude := Longitude_Deg;
-                  Projected_State.State := Planning_State;
                   Projected_State.Time := Get (State.m_currentEntityStates, VehicleID).Time;
+                  Planning_State.PlanningHeading := Get (State.m_currentEntityStates, VehicleID).Heading;
+                  exit;
                end if;
-               State.m_projectedEntityStates := Set (State.m_projectedEntityStates,
-                     Request_Id,
-                     Add (Get (State.m_projectedEntityStates, Request_Id), Projected_State));
             end loop;
+            if not Found_State then
+               Planning_State.EntityID := VehicleID;
+               Planning_State.PlanningPosition := Get (State.m_currentEntityStates, VehicleID).Location;
+               Planning_State.PlanningHeading := Get (State.m_currentEntityStates, VehicleID).Heading;
+               Convert_LatLong_Degrees_To_NorthEast_Meters (Converter, Get (State.m_currentEntityStates, VehicleID).Location.Latitude, Get (State.m_currentEntityStates, VehicleID).Location.Longitude, North_M, East_M);
+               North_M := North_M + Config.m_assignmentStartPointLead_m * (Cos (Real64 (Get (State.m_currentEntityStates, VehicleID).Heading)) * dDegreesToRadians);
+               East_M := East_M + Config.m_assignmentStartPointLead_m * (Sin (Real64 (Get (State.m_currentEntityStates, VehicleID).Heading)) * dDegreesToRadians);
+               Convert_NorthEast_Meters_To_LatLong_Degrees (Converter, North_M, East_M, Latitude_Deg, Longitude_Deg);
+               Planning_State.PlanningPosition.Latitude := Latitude_Deg;
+               Planning_State.PlanningPosition.Longitude := Longitude_Deg;
+               Projected_State.State := Planning_State;
+               Projected_State.Time := Get (State.m_currentEntityStates, VehicleID).Time;
+            end if;
+            State.m_projectedEntityStates := Set (State.m_projectedEntityStates,
+                  Request_Id, Add (Get (State.m_projectedEntityStates, Request_Id), Projected_State));
          end;
       end loop;
       Insert (State.m_remainingAssignments, Request_Id, Received_Message.TaskList);
@@ -220,28 +222,29 @@ package body Plan_Builder with SPARK_Mode is
                corrMish := Get (MissionCo_List, I);
                Position := I;
                Found := True;
-
-               if Length (corrMish.WaypointList) /= 0 then
-                  WP :=  Get (corrMish.WaypointList, Last (corrMish.WaypointList));
-                  WP.NextWaypoint := Common.Int64 (Get (Received_Message.TaskWaypoints, WP_Sequences.First).Number);
-                  corrMish.WaypointList := Set (corrMish.WaypointList, Last (corrMish.WaypointList), WP);
-               else
-                  for W in 1 .. Last (Received_Message.TaskWaypoints) loop
-                     pragma Loop_Invariant (Length (corrMish.WaypointList) = To_Big_Integer (W - 1));
-                     corrMish.WaypointList := Add (corrMish.WaypointList, Get (Received_Message.TaskWaypoints, W));
-                  end loop;
-               end if;
-               pragma Assert (Position in MC_Sequences.First .. Last (MissionCo_List));
-               MissionCo_List := Set (MissionCo_List, Position, corrMish);
-               Response_In_Progress.MissionCommandList := MissionCo_List;
-               Replace (State.m_inProgressResponse, Unique_Request_Id, Response_In_Progress);
                exit;
             end if;
+
             pragma Loop_Invariant
                (for all K in 1 .. I => Get (MissionCo_List, K).VehicleId /= Vehicle_ID);
          end loop;
 
-         if not Found then
+         if Found then
+            if Length (corrMish.WaypointList) /= 0 then
+               WP :=  Get (corrMish.WaypointList, Last (corrMish.WaypointList));
+               WP.NextWaypoint := Common.Int64 (Get (Received_Message.TaskWaypoints, WP_Sequences.First).Number);
+               corrMish.WaypointList := Set (corrMish.WaypointList, Last (corrMish.WaypointList), WP);
+            end if;
+            for W in 1 .. Last (Received_Message.TaskWaypoints) loop
+               pragma Loop_Invariant (Length (corrMish.WaypointList) = To_Big_Integer (W - 1));
+               corrMish.WaypointList := Add (corrMish.WaypointList, Get (Received_Message.TaskWaypoints, W));
+            end loop;
+            pragma Assert (Position in MC_Sequences.First .. Last (MissionCo_List));
+            MissionCo_List := Set (MissionCo_List, Position, corrMish);
+            Response_In_Progress.MissionCommandList := MissionCo_List;
+            Replace (State.m_inProgressResponse, Unique_Request_Id, Response_In_Progress);
+
+         else
             for Request_Id of State.m_reqeustIDVsOverrides loop
                declare
                   Overrides : SpeedAltPair_Sequence := Element (State.m_reqeustIDVsOverrides, Request_Id);

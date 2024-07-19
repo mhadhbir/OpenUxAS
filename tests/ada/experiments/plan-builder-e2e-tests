@@ -47,5 +47,14 @@ mkdir -p "${SCRIPT_DIR}/output"
 # Run the comparison
 activate_venv
 
-echo "TODO: add python call to compare the C++ and Ada test results"
+echo "Comparing Process_Task_Assignment_Summary_Test"
 python3 "${SCRIPT_DIR}/scripts/diff.py" "${SCRIPT_DIR}/output/Cpp_Process_Task_Assignment_Summary_Test.txt" "${SCRIPT_DIR}/output/Ada_Process_Task_Assignment_Summary_Test.txt"
+
+echo "Comparing Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test"
+python3 "${SCRIPT_DIR}/scripts/diff.py" "${SCRIPT_DIR}/output/Cpp_Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test.txt" "${SCRIPT_DIR}/output/Ada_Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test.txt"
+
+echo "Comparing Process_Task_Implementation_Response_Vehicle_Exists_WPList_NotEmpty_Test"
+python3 "${SCRIPT_DIR}/scripts/diff.py" "${SCRIPT_DIR}/output/Cpp_Process_Task_Implementation_Response_Vehicle_Exists_WPList_NotEmpty_Test.txt" "${SCRIPT_DIR}/output/Ada_Process_Task_Implementation_Response_Vehicle_Exists_WPList_NotEmpty_Test.txt"
+
+echo "Comparing Process_Task_Implementation_Response_Vehicle_DoesNotExists_Test"
+python3 "${SCRIPT_DIR}/scripts/diff.py" "${SCRIPT_DIR}/output/Cpp_Process_Task_Implementation_Response_Vehicle_DoesNotExists_Test.txt" "${SCRIPT_DIR}/output/Ada_Process_Task_Implementation_Response_Vehicle_DoesNotExists_Test.txt"

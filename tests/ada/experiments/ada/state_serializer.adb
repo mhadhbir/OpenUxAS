@@ -54,7 +54,6 @@ package body State_Serializer is
    begin
       return To_Unbounded_String ("UniqueAutomationRequest: RequestID => " & Int64'Image (Request.RequestID) &
          ", OperatingRegion => " & Int64'Image (Request.OperatingRegion) &
-         ", TaskRelationships => " & To_String (Request.TaskRelationships) &
          ", RedoAllTasks => " & Boolean'Image (Request.RedoAllTasks)) &
          ", Entity List: => " & Int64_Seq_To_String (Request.EntityList) &
          ", Task List: => " & Int64_Seq_To_String (Request.TaskList) &

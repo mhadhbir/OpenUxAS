@@ -16,12 +16,12 @@ namespace test
     std::ostringstream oss;
     oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
     oss.precision(14);
-    oss << "PlanningState: EntityID => " << state->getEntityID()
-        << ", Latitude => " << state->getPlanningPosition()->getLatitude()
-        << ", Longitude => " << state->getPlanningPosition()->getLongitude()
-        << ", Altitude => " << state->getPlanningPosition()->getAltitude()
-        << ", AltitudeType => " << state->getPlanningPosition()->getAltitudeType()
-        << ", Heading => " << state->getPlanningHeading();
+    oss << "PlanningState: EntityID =>   " << state->getEntityID()
+        << ", Latitude =>  " << state->getPlanningPosition()->getLatitude()
+        << ", Longitude =>  " << state->getPlanningPosition()->getLongitude()
+        << ", Altitude =>  " << state->getPlanningPosition()->getAltitude()
+        << ", AltitudeType =>  " << state->getPlanningPosition()->getAltitudeType()
+        << ", Heading =>  " << state->getPlanningHeading();
     return oss.str();
     }
 
@@ -47,14 +47,13 @@ namespace test
     std::ostringstream oss;
     oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
     oss.precision(14);
-    oss << "UniqueAutomationRequest: RequestID => " << request->getRequestID()
-        << ", OperatingRegion => " << request->getOriginalRequest()->getOperatingRegion()
-        << ", TaskRelationships => " << request->getOriginalRequest()->getTaskRelationships()
-        << ", RedoAllTasks => " << request->getOriginalRequest()->getRedoAllTasks()
-        << ", Entity List: => " << Int64_Seq_To_String(request->getOriginalRequest()->getEntityList())
-        << ", Task List: => " << Int64_Seq_To_String(request->getOriginalRequest()->getTaskList())
+    oss << "UniqueAutomationRequest: RequestID =>  " << request->getRequestID()
+        << ", OperatingRegion =>  " << request->getOriginalRequest()->getOperatingRegion()
+        << ", RedoAllTasks =>  " << request->getOriginalRequest()->getRedoAllTasks()
+        << ", Entity List: =>  " << Int64_Seq_To_String(request->getOriginalRequest()->getEntityList())
+        << ", Task List: =>  " << Int64_Seq_To_String(request->getOriginalRequest()->getTaskList())
         << PlanningState_Seq_To_String(request->getPlanningStates())
-        << ", SandboxRequest => " << request->getSandBoxRequest();
+        << ", SandboxRequest =>  " << request->getSandBoxRequest();
     return oss.str();
     }
 
@@ -83,7 +82,7 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << ", VA => " + Int64_Seq_To_String(va->getAssociatedTaskList());
+        oss << ", VA =>  " + Int64_Seq_To_String(va->getAssociatedTaskList());
         return oss.str();
     }
 
@@ -101,10 +100,10 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "VehicleActionCommand: CommandId => " << command->getCommandID()
-            << ", VehicleId => " << command->getVehicleID()
+        oss << "VehicleActionCommand: CommandId =>  " << command->getCommandID()
+            << ", VehicleId =>  " << command->getVehicleID()
             << VA_Seq_To_String(command->getVehicleActionList())
-            << ", Status => " << command->getStatus();
+            << ", Status =>  " << command->getStatus();
         return oss.str();
     }
 
@@ -122,18 +121,18 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "Waypoint: Number => " << wp->getNumber()
-            << ", Latitude => " << wp->getLatitude()
-            << ", Longitude => " << wp->getLongitude()
-            << ", Altitude => " << wp->getAltitude()
-            << ", AltitudeType => " << wp->getAltitudeType()
-            << ", NextWaypoint => " << wp->getNextWaypoint()
-            << ", Speed => " << wp->getSpeed()
-            << ", SpeedType => " << wp->getSpeedType()
-            << ", ClimbRate => " << wp->getClimbRate()
-            << ", TurnType => " << wp->getTurnType()
-            << ", ContingencyWaypointA => " << wp->getContingencyWaypointA()
-            << ", ContingencyWaypointB => " << wp->getContingencyWaypointB()
+        oss << "Waypoint: Number =>  " << wp->getNumber()
+            << ", Latitude =>  " << wp->getLatitude()
+            << ", Longitude =>  " << wp->getLongitude()
+            << ", Altitude =>  " << wp->getAltitude()
+            << ", AltitudeType =>  " << wp->getAltitudeType()
+            << ", NextWaypoint =>  " << wp->getNextWaypoint()
+            << ", Speed =>  " << wp->getSpeed()
+            << ", SpeedType =>  " << wp->getSpeedType()
+            << ", ClimbRate =>  " << wp->getClimbRate()
+            << ", TurnType =>  " << wp->getTurnType()
+            << ", ContingencyWaypointA =>  " << wp->getContingencyWaypointA()
+            << ", ContingencyWaypointB =>  " << wp->getContingencyWaypointB()
             << VA_Seq_To_String(wp->getVehicleActionList())
             << Int64_Seq_To_String(wp->getAssociatedTasks());
         return oss.str();
@@ -153,12 +152,12 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "MissionCommand: CommandId => " << command->getCommandID()
-            << ", VehicleId => " << command->getVehicleID()
+        oss << "MissionCommand: CommandId =>  " << command->getCommandID()
+            << ", VehicleId =>  " << command->getVehicleID()
             << VA_Seq_To_String(command->getVehicleActionList())
-            << ", Status => " << command->getStatus()
+            << ", Status =>  " << command->getStatus()
             << WP_Seq_To_String(command->getWaypointList())
-            << ", FirstWaypoint => " << command->getFirstWaypoint();
+            << ", FirstWaypoint =>  " << command->getFirstWaypoint();
         return oss.str();
     }
 
@@ -186,7 +185,7 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "UniqueAutomationResponse: ResponseID => " << response->getResponseID()
+        oss << "UniqueAutomationResponse: ResponseID =>  " << response->getResponseID()
             << MissionCommand_Seq_To_String(response->getOriginalResponse()->getMissionCommandList())
             << VehicleActionCommand_Seq_To_String(response->getOriginalResponse()->getVehicleCommandList())
             << KVP_Seq_To_String(response->getOriginalResponse()->getInfo())
@@ -204,11 +203,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignment: TaskID => " << task_assignment->getTaskID()
-            << ", OptionID => " << task_assignment->getOptionID()
-            << ", AssignedVehicle => " << task_assignment->getAssignedVehicle()
-            << ", TimeThreshold => " << task_assignment->getTimeThreshold()
-            << ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        oss << "TaskAssignment: TaskID =>  " << task_assignment->getTaskID()
+            << ", OptionID =>  " << task_assignment->getOptionID()
+            << ", AssignedVehicle =>  " << task_assignment->getAssignedVehicle()
+            << ", TimeThreshold =>  " << task_assignment->getTimeThreshold()
+            << ", TimeTaskCompleted =>  " << task_assignment->getTimeTaskCompleted();
         return oss.str();
     }
 
@@ -228,11 +227,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignment: TaskID => "  << task_assignment->getTaskID()
-            << ", OptionID => " << task_assignment->getOptionID()
-            << ", AssignedVehicle => " << task_assignment->getAssignedVehicle()
-            << ", TimeThreshold => " << task_assignment->getTimeThreshold()
-            << ", TimeTaskCompleted => " << task_assignment->getTimeTaskCompleted();
+        oss << "TaskAssignment: TaskID =>  "  << task_assignment->getTaskID()
+            << ", OptionID =>  " << task_assignment->getOptionID()
+            << ", AssignedVehicle =>  " << task_assignment->getAssignedVehicle()
+            << ", TimeThreshold =>  " << task_assignment->getTimeThreshold()
+            << ", TimeTaskCompleted =>  " << task_assignment->getTimeTaskCompleted();
         return oss.str();
     }
 
@@ -252,8 +251,8 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "TaskAssignmentSummary: CorrespondingAutomationRequestID => " << task_assignment_summary->getCorrespondingAutomationRequestID()
-            << ", OperatingRegion => " << task_assignment_summary->getOperatingRegion()
+        oss << "TaskAssignmentSummary: CorrespondingAutomationRequestID =>  " << task_assignment_summary->getCorrespondingAutomationRequestID()
+            << ", OperatingRegion =>  " << task_assignment_summary->getOperatingRegion()
             << TaskAssignment_Vect_To_String(task_assignment_summary->getTaskList());
         return oss.str();
     }
@@ -268,7 +267,7 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "ProjectedState: FinalWaypointID => " << state->finalWaypointID
+        oss << "ProjectedState: FinalWaypointID =>  " << state->finalWaypointID
             << ", Time => " << state->time
             << PlanningState_To_String(state->state);
         return oss.str();
@@ -300,7 +299,7 @@ namespace test
 
     void PlanBuilderTests::Write_Int64_Map(std::string file, std::unordered_map< int64_t, int64_t > map) {
         for (auto& pair : map)  {
-            Write_String_To_File(file, std::to_string(pair.second));
+            Write_String_To_File(file, " " + std::to_string(pair.second));
         }
     }
 
@@ -308,13 +307,13 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "EntityState: Id => " << entity_state->getID()
-            << ", Latitude => " << entity_state->getLocation()->getLatitude()
-            << ", Longitude => " << entity_state->getLocation()->getLongitude()
-            << ", Altitude => " << entity_state->getLocation()->getAltitude()
-            << ", AltitudeType => " << entity_state->getLocation()->getAltitudeType()
-            << ", Heading => " << entity_state->getHeading()
-            << ", Time => " << entity_state->getTime();
+        oss << "EntityState: Id =>  " << entity_state->getID()
+            << ", Latitude =>  " << entity_state->getLocation()->getLatitude()
+            << ", Longitude =>  " << entity_state->getLocation()->getLongitude()
+            << ", Altitude =>  " << entity_state->getLocation()->getAltitude()
+            << ", AltitudeType =>  " << entity_state->getLocation()->getAltitudeType()
+            << ", Heading =>  " << entity_state->getHeading()
+            << ", Time =>  " << entity_state->getTime();
         return oss.str();
     }
 
@@ -328,11 +327,11 @@ namespace test
         std::ostringstream oss;
         oss.setf(std::ios_base::boolalpha | std::ios::scientific | std::ios::uppercase);
         oss.precision(14);
-        oss << "SpeedAltPair: VehicleID => " << sap->getVehicleID()
-            << ", TaskID => " << sap->getTaskID()
-            << ", Speed => " << sap->getSpeed()
-            << ", Altitude => " << sap->getAltitude()
-            << ", AltitudeType => " << sap->getAltitudeType();
+        oss << "SpeedAltPair: VehicleID =>  " << sap->getVehicleID()
+            << ", TaskID =>  " << sap->getTaskID()
+            << ", Speed =>  " << sap->getSpeed()
+            << ", Altitude =>  " << sap->getAltitude()
+            << ", AltitudeType =>  " << sap->getAltitudeType();
     return oss.str();
     }
 
@@ -488,9 +487,6 @@ namespace test
     planState4->setPlanningHeading(1.0);
     service->m_uniqueAutomationRequests[taskAssignmentSummary->getCorrespondingAutomationRequestID()]->getPlanningStates().push_back(planState4);
 
-
-    service->checkNextTaskImplementationRequest(5);
-
     service->processTaskAssignmentSummary(taskAssignmentSummary);
 
     writeStateToFile("Cpp_Process_Task_Assignment_Summary_Test.txt", service);
@@ -526,64 +522,73 @@ namespace test
     service->m_inProgressResponse[1] = Response_In_Progress;
 
     service->processTaskImplementationResponse(taskImplementationResponse);
+
+    writeStateToFile("Cpp_Process_Task_Implementation_Response_Vehicle_Exists_WPList_Empty_Test.txt", service);
+
     }
 
     void PlanBuilderTests::Process_Task_Implementation_Response_Vehicle_Exists_WPList_NotEmpty_Test ()
     {
-    uxas::service::PlanBuilderService service;
+    uxas::service::PlanBuilderService* service = new uxas::service::PlanBuilderService();
 
     std::shared_ptr<uxas::messages::task::TaskImplementationResponse> taskImplementationResponse = std::make_shared<uxas::messages::task::TaskImplementationResponse>();
     taskImplementationResponse->setResponseID(1);
     taskImplementationResponse->setVehicleID(100);
 
-    std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> Response_In_Progress;
+    std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> Response_In_Progress = std::make_shared<uxas::messages::task::UniqueAutomationResponse>();
     Response_In_Progress->setResponseID(1);
 
-    service.m_expectedResponseID[1] = 1;
+    service->m_expectedResponseID[1] = 1;
 
-    afrl::cmasi::Waypoint* waypoint1;
-    afrl::cmasi::Waypoint* waypoint2;
+    afrl::cmasi::Waypoint* waypoint1 = new afrl::cmasi::Waypoint();
+    afrl::cmasi::Waypoint* waypoint2 = new afrl::cmasi::Waypoint();
     waypoint1->setNumber(1);
     waypoint2->setNumber(2);
     taskImplementationResponse->getTaskWaypoints().push_back(waypoint1);
     taskImplementationResponse->getTaskWaypoints().push_back(waypoint2);
 
-    afrl::cmasi::MissionCommand* missioncommand1;
-    afrl::cmasi::MissionCommand* missioncommand2;
+    afrl::cmasi::MissionCommand* missioncommand1 = new afrl::cmasi::MissionCommand;
+    afrl::cmasi::MissionCommand* missioncommand2 = new afrl::cmasi::MissionCommand;
     missioncommand1->setVehicleID(100);
-    missioncommand1->getWaypointList().push_back(waypoint1);
-    missioncommand1->getWaypointList().push_back(waypoint2);
+    afrl::cmasi::Waypoint* waypoint3 = new afrl::cmasi::Waypoint();
+    afrl::cmasi::Waypoint* waypoint4 = new afrl::cmasi::Waypoint();
+    waypoint3->setNumber(1);
+    waypoint4->setNumber(2);
+    missioncommand1->getWaypointList().push_back(waypoint3);
+    missioncommand1->getWaypointList().push_back(waypoint4);
     missioncommand2->setVehicleID(101);
     Response_In_Progress->getOriginalResponse()->getMissionCommandList().push_back(missioncommand1);
     Response_In_Progress->getOriginalResponse()->getMissionCommandList().push_back(missioncommand2);
 
-    service.m_inProgressResponse[1] = Response_In_Progress;
+    service->m_inProgressResponse[1] = Response_In_Progress;
 
-    service.processTaskImplementationResponse(taskImplementationResponse);
+    service->processTaskImplementationResponse(taskImplementationResponse);
+
+    writeStateToFile("Cpp_Process_Task_Implementation_Response_Vehicle_Exists_WPList_NotEmpty_Test.txt", service);
     }
 
     void PlanBuilderTests::Process_Task_Implementation_Response_Vehicle_DoesNotExists_Test ()
     {
-    uxas::service::PlanBuilderService service;
+    uxas::service::PlanBuilderService* service = new uxas::service::PlanBuilderService();
 
     auto taskImplementationResponse = std::make_shared<uxas::messages::task::TaskImplementationResponse>();
     taskImplementationResponse->setResponseID(1);
     taskImplementationResponse->setVehicleID(102);
 
-    std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> Response_In_Progress;
+    std::shared_ptr<uxas::messages::task::UniqueAutomationResponse> Response_In_Progress = std::make_shared<uxas::messages::task::UniqueAutomationResponse>();
     Response_In_Progress->setResponseID(1);
 
-    service.m_expectedResponseID[1] = 1;
+    service->m_expectedResponseID[1] = 1;
 
-    afrl::cmasi::Waypoint* waypoint1;
-    afrl::cmasi::Waypoint* waypoint2;
+    afrl::cmasi::Waypoint* waypoint1 = new afrl::cmasi::Waypoint();
+    afrl::cmasi::Waypoint* waypoint2 = new afrl::cmasi::Waypoint();
     waypoint1->setNumber(1);
     waypoint2->setNumber(2);
     taskImplementationResponse->getTaskWaypoints().push_back(waypoint1);
     taskImplementationResponse->getTaskWaypoints().push_back(waypoint2);
 
-    afrl::cmasi::MissionCommand* missioncommand1;
-    afrl::cmasi::MissionCommand* missioncommand2;
+    afrl::cmasi::MissionCommand* missioncommand1 = new afrl::cmasi::MissionCommand;
+    afrl::cmasi::MissionCommand* missioncommand2 = new afrl::cmasi::MissionCommand;
     missioncommand1->setVehicleID(100);
     missioncommand1->getWaypointList().push_back(waypoint1);
     missioncommand1->getWaypointList().push_back(waypoint2);
@@ -591,14 +596,16 @@ namespace test
     Response_In_Progress->getOriginalResponse()->getMissionCommandList().push_back(missioncommand1);
     Response_In_Progress->getOriginalResponse()->getMissionCommandList().push_back(missioncommand2);
 
-    service.m_inProgressResponse[1] = Response_In_Progress;
+    service->m_inProgressResponse[1] = Response_In_Progress;
 
-    service.processTaskImplementationResponse(taskImplementationResponse);
+    service->processTaskImplementationResponse(taskImplementationResponse);
+
+    writeStateToFile("Cpp_Process_Task_Implementation_Response_Vehicle_DoesNotExists_Test.txt", service);
     }
 
     void PlanBuilderTests::Check_Next_Task_Implementation_Request_Test()
     {
-    auto service = uxas::stduxas::make_unique<uxas::service::PlanBuilderService>();
+    uxas::service::PlanBuilderService* service = new uxas::service::PlanBuilderService();
 
     std::vector< std::shared_ptr<uxas::service::PlanBuilderService::ProjectedState> > projectedStates;
     uxas::messages::task::PlanningState* state = new uxas::messages::task::PlanningState;
